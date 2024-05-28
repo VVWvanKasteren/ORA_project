@@ -9,7 +9,7 @@ import numpy as np
 import ast
 import pandas as pd
 
-with open("sprint_hint03.dat", 'r') as file:
+with open("instances/sprint_hint03.dat", 'r', errors = 'ignore') as file:
     lines = [line.strip().split() for line in file]
     n_days = 28
     shift_types = []
@@ -155,21 +155,3 @@ print('\nParameters by contract (value, weight):')
 print(contr_param)
 print('\nUnwanted patterns by contract:', unw_pats)
 print('\nWeights unwanted patterns by contract:', w_unw_pats)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
