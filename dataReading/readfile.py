@@ -221,14 +221,14 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
                 if count % 2 == 1:
                     temp[i].append([j,j+1])
 
-    D = {}
+    D_in = {}
 
     for i in range(1, n_nurses+1):
-        D[i] = temp[int(nurse_contracts[i-1])+1]
+        D_in[i] = temp[int(nurse_contracts[i-1])+1]
 
-    print(f"D_in: {D}\n")
+    print(f"D_in: {D_in}\n")
 
-    # P_n parameter
+    # P_n (shifts) parameter
     P_shifts = {}
 
     for i in range(1, n_nurses+1):
@@ -236,4 +236,71 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
 
     print(f"P (unwanted shift patterns): {P_shifts}\n")
 
-createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
+    # P_n (days) parameter
+    # ???
+
+    # y_lowerb_in, y_upperb_in, w_a_in, w_b_in", w_log_in parameters
+    y_low_in = {}
+    y_high_in = {}
+    w_a_in = {}
+    w_b_in = {}
+    w_log_in = {}
+
+    for i in range(1, n_nurses+1):
+        y_low_in[i] = []
+        y_high_in[i] = []
+        w_a_in[i] = []
+        w_b_in[i] = []
+        w_log_in[i] = []
+
+        y_low_in[i].append(contr_param.iloc[1][int(nurse_contracts[i-1])][0])
+        y_high_in[i].append(contr_param.iloc[0][int(nurse_contracts[i-1])][0])
+        w_a_in[i].append(contr_param.iloc[1][int(nurse_contracts[i-1])][1])
+        w_b_in[i].append(contr_param.iloc[0][int(nurse_contracts[i-1])][1])
+        w_log_in[i].append(contr_param.iloc[9][int(nurse_contracts[i-1])][1])
+
+        y_low_in[i].append(contr_param.iloc[5][int(nurse_contracts[i-1])][0])
+        y_high_in[i].append(contr_param.iloc[4][int(nurse_contracts[i-1])][0])
+        w_a_in[i].append(contr_param.iloc[5][int(nurse_contracts[i-1])][1])
+        w_b_in[i].append(contr_param.iloc[4][int(nurse_contracts[i-1])][1])
+        w_log_in[i].append(contr_param.iloc[11][int(nurse_contracts[i-1])][1])
+
+        y_low_in[i].append(contr_param.iloc[3][int(nurse_contracts[i-1])][0])
+        y_high_in[i].append(contr_param.iloc[2][int(nurse_contracts[i-1])][0])
+        w_a_in[i].append(contr_param.iloc[3][int(nurse_contracts[i-1])][1])
+        w_b_in[i].append(contr_param.iloc[2][int(nurse_contracts[i-1])][1])
+        w_log_in[i].append(contr_param.iloc[10][int(nurse_contracts[i-1])][1])
+
+        y_low_in[i].append(0)
+        y_high_in[i].append(contr_param.iloc[8][int(nurse_contracts[i-1])][0])
+        w_a_in[i].append(0)
+        w_b_in[i].append(contr_param.iloc[8][int(nurse_contracts[i-1])][1])
+        w_log_in[i].append(contr_param.iloc[12][int(nurse_contracts[i-1])][1])
+
+        y_low_in[i].append(contr_param.iloc[7][int(nurse_contracts[i-1])][0])
+        y_high_in[i].append(contr_param.iloc[6][int(nurse_contracts[i-1])][0])
+        w_a_in[i].append(contr_param.iloc[7][int(nurse_contracts[i-1])][1])
+        w_b_in[i].append(contr_param.iloc[6][int(nurse_contracts[i-1])][1])
+        w_log_in[i].append(w_unw_pats[int(nurse_contracts[i-1])])
+
+        # Ranged soft constraint 6/#number of days of after night shift??
+        # Logical soft constaint 7/day on/off request???
+
+        w_log_in[i].append(shift_off_reqs[i-1])
+
+    print(f"y_lowerb_in: {y_low_in}")
+    print(f"y_upperb_in: {y_high_in}\n")
+
+    print(f"w_a_in (lowerb): {w_a_in}")
+    print(f"w_a_in (upperb): {w_b_in}\n")
+
+    print(f"w_log_in:")
+    print(w_log_in)
+    print("")
+
+    # Last four parameters??
+
+
+    return N, S_a, S_b, D, Pi, W, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in
+
+N, S_a, S_b, D, Pi, W, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
