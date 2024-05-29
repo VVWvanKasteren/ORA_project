@@ -197,31 +197,17 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
 
     # W_n parameter
     W = {}
-    for i in range(n_nurses):
-        W[i+1] = []
+    for i in range(1, n_nurses+1):
+        W[i] = []
         w_count = 1
         count = 0
-        if nurse_contracts[i] == 0:
-            for j in range(len(weekends_contract[0])):
-                if weekends_contract[0][j][0] == 1:
-                    count += 1
-                    if count % 2 == 1:
-                        W[i+1].append(w_count)
-                        w_count +=1
-        if nurse_contracts[i] == 1:
-            for j in range(len(weekends_contract[1])):
-                if weekends_contract[1][j][0] == 1:
-                    count += 1
-                    if count % 2 == 1:
-                        W[i+1].append(w_count)
-                        w_count +=1
-        if nurse_contracts[i] == 2:
-            for j in range(len(weekends_contract[2])):
-                if weekends_contract[2][j][0] == 1:
-                    count += 1
-                    if count % 2 == 1:
-                        W[i+1].append(w_count)
-                        w_count +=1
+        for j in range(len(weekends_contract[int(nurse_contracts[i-1])])):
+            if weekends_contract[int(nurse_contracts[i-1])][j][0] == 1:
+                count += 1
+                if count % 2 == 1:
+                    W[i].append(w_count)
+                    w_count +=1
+
     print(f"W_n: {W}\n")
 
     # D_in parameter
@@ -236,14 +222,18 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
                     temp[i].append([j,j+1])
 
     D = {}
-    for i in range(n_nurses):
-        if nurse_contracts[i] == 0:
-            D[i+1] = temp[1]
-        elif nurse_contracts[i] == 1:
-            D[i+1] = temp[2]
-        else:
-            D[i+1] = temp[3]
-    print(f"D_in: {D}")
 
+    for i in range(1, n_nurses+1):
+        D[i] = temp[int(nurse_contracts[i-1])+1]
+
+    print(f"D_in: {D}\n")
+
+    # P_n parameter
+    P_shifts = {}
+
+    for i in range(1, n_nurses+1):
+        P_shifts[i] = unw_pats[int(nurse_contracts[i-1])]
+
+    print(f"P (unwanted shift patterns): {P_shifts}\n")
 
 createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
