@@ -301,6 +301,21 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
     # Last four parameters??
 
 
-    return N, S_a, S_b, D, Pi, W, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in
+    return {
+        'N': N,
+        'S': shift_types,
+        'S_a': S_a,
+        'S_b': S_b,
+        'D': D,
+        'Pi': Pi,
+        'W_n': W,
+        'D_in': D_in,
+        'P_shifts': P_shifts,
+        'y_low_in': y_low_in,
+        'y_high_in': y_high_in,
+        'w_a_in': w_a_in,
+        'w_b_in': w_b_in,
+        'w_log_in': w_log_in
+    }
 
-N, S_a, S_b, D, Pi, W, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
+params = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
