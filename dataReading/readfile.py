@@ -499,6 +499,16 @@ def penalty_per_nurse(solution, nurse_index, params):
         penalty += params['w_max_comp_WE'][nurse_key][0]
         
     # Identical shifts during complete weekends
+    num_ident_shifts_comp_WE = 0
+    for i in range(len(complete_weekends)):
+        if complete_weekends[i] == 1:
+            weekend = params['D_in'][nurse_key][i]
+            Sat = weekend[0]
+            Sun = weekend[1]
+            if np.array_equal(solution[nurse_index, Sat], solution[nurse_index, Sun]):
+                num_ident_shifts_comp_WE += 1
+    if num_ident_shifts_comp_WE > params['max_ident_shifts_comp_WE'][nurse_key][0]:
+        penalty += params['w_max_ident_shifts_comp_WE'][nurse_key][0]
     
     # Single assignement per day
     
