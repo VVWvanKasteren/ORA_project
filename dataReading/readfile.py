@@ -388,7 +388,7 @@ lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], para
 """
 In order to check the soft constraints related to consecutive days or weekends,
 we use the function find_runs(x). Credit goes to Alistair Miles. The original
-code can be found using the following link:
+code can be found using the following link (last accessed on 30.05.2024):
 https://gist.github.com/alimanfoo/c5977e87111abe8127453b21204c1065
 """
 
