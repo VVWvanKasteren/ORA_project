@@ -353,3 +353,129 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_hig
 #N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
 params = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
 lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'])
+
+"""
+In order to check the soft constraints related to consecutive days or weekends,
+we use the function find_runs(x). Credit goes to Alistair Miles. The original
+code can be found using the following link:
+https://gist.github.com/alimanfoo/c5977e87111abe8127453b21204c1065
+"""
+
+def find_runs(x):
+    """Find runs of consecutive items in an array."""
+
+    # ensure array
+    x = np.asanyarray(x)
+    if x.ndim != 1:
+        raise ValueError('only 1D array supported')
+    n = x.shape[0]
+
+    # handle empty array
+    if n == 0:
+        return np.array([]), np.array([]), np.array([])
+
+    else:
+        # find run starts
+        loc_run_start = np.empty(n, dtype=bool)
+        loc_run_start[0] = True
+        np.not_equal(x[:-1], x[1:], out=loc_run_start[1:])
+        run_starts = np.nonzero(loc_run_start)[0]
+
+        # find run values
+        run_values = x[loc_run_start]
+
+        # find run lengths
+        run_lengths = np.diff(np.append(run_starts, n))
+
+        return run_values, run_starts, run_lengths
+
+##### Defining the objective function with the soft constraints #####
+
+#[NumAss,ConsecFreeDays,ConsecWorkDays,WorkWEIn4Weeks,ConsecWorkWE]
+
+def penalty_per_nurse(solution, nurse_index, parameters):
+    # Define nurse key
+    nurse_key = nurse_index + 1
+    
+    # Initialise penalty to be 0
+    penalty = 0
+    
+    # Maximum number of assignments
+    if np.sum(solution[nurse_index,:,:]) > params['y_high_in'][nurse_key][0]:
+        penalty += params['w_b_in'][nurse_key][0]
+    
+    # Minimum number of assignments
+    if np.sum(solution[nurse_index,:,:]) < params['y_low_in'][nurse_key][0]:
+        penalty += params['w_a_in'][nurse_key][0]
+        
+    # Maximum number of consecutive working days
+    # Create array with days -> 1 if working, 0 otherwise
+    working_days = np.zeros(np.amax(params['D']))
+    print(working_days)
+    for i in range(np.amax(params['D'])):
+        print(i)
+        if np.sum(solution[nurse_index,i,:]) > 0:
+            z = 1
+            #working_days[i] = 1
+    # Minimum number of consecutive working days
+    
+    # Maximum number of consecutive free days
+    
+    # Minimum number of consecutive free days
+    
+    # Maximum number of consecutive working weekends
+    
+    # Complete weekends
+    
+    # Identical complete weekends
+    
+    # Single assignement per day
+    
+    # Two free days after a night shift
+    
+    # Requested day on/off
+    
+    # Requested shift on/off
+    
+    # Alternative skill
+    
+    # Unwanted patterns
+    # Unwanted shift patterns
+    
+    
+    return penalty
+
+##### Creating a good initial solution #####
+
+# Calculate initial potential penalities of assigning a nurse to a shift
+
+
+# Solution assignment of the following form:
+    # [nurse][day][shift type] = 1 if shift is assigned to nurse; 0 otherwise
+
+current_solution = np.zeros([n_nurses, day, n_shift_types])
+
+test_penalty = penalty_per_nurse(current_solution, 1, params)
+print(test_penalty)
+
+working_days = np.zeros(np.amax(params['D']))
+print(working_days)
+for i in range(np.amax(params['D'])):
+    print(i)
+    if np.sum(current_solution[1,i,:]) > 0:
+        working_days[i] = 1
+
+'''
+for day in range(demand.shape[0]):
+    print(f"Day {day+1} demands:")
+    for shift in demand.columns:
+        print(f"  Shift {shift}: {demand.loc[day][shift]}")
+'''
+'''
+for day in range(demand.shape[0]):
+    for shift_index, shift in enumerate(demand.columns):
+        required_demand = demand.loc[day][shift]
+        assigned_nurses = np.sum(current_solution[:, day, shift_index])
+        if required_demand < assigned_nurses:
+            # assign nurse with the smallest penalty to the shift  
+'''
