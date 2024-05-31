@@ -9,6 +9,7 @@ import numpy as np
 import ast
 import pandas as pd
 import math
+from gurobipy import *
 
 with open("sprint_hint03.dat", 'r', errors = 'ignore') as file:
     lines = [line.strip().split() for line in file]
@@ -196,19 +197,19 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
     print(f"Pie: {Pi}\n")
 
     # W_n parameter
-    W = {}
+    W_n = {}
     for i in range(1, n_nurses+1):
-        W[i] = []
+        W_n[i] = []
         w_count = 1
         count = 0
         for j in range(len(weekends_contract[int(nurse_contracts[i-1])])):
             if weekends_contract[int(nurse_contracts[i-1])][j][0] == 1:
                 count += 1
                 if count % 2 == 1:
-                    W[i].append(w_count)
+                    W_n[i].append(w_count)
                     w_count +=1
 
-    print(f"W_n: {W}\n")
+    print(f"W_n: {W_n}\n")
 
     # D_in parameter
     temp = {}
@@ -301,6 +302,7 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
     # Last four parameters??
 
 
+    #return N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in
     return {
         'N': N,
         'S': shift_types,
@@ -308,7 +310,7 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'S_b': S_b,
         'D': D,
         'Pi': Pi,
-        'W_n': W,
+        'W_n': W_n,
         'D_in': D_in,
         'P_shifts': P_shifts,
         'y_low_in': y_low_in,
@@ -318,4 +320,36 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'w_log_in': w_log_in
     }
 
+def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in):
+
+    model=Model('nrp')
+    model.setParam('OutputFlag', True)
+
+    # Defining DV's in order of the article
+    # DV 1
+    x = model.addVars(N, shift_types, D, vtype=GRB.BINARY, name = 'x')
+
+    # DV 2
+    for i in N:
+        y = model.addVars(N, W_n[i], vtype=GRB.BINARY, name = 'y')
+
+    # DV 3
+    w = model.addVars([(int(i), j, k) for i in N for j in D for k in D if k >= j], vtype=GRB.BINARY, name = 'w')
+
+    # DV 4
+    r = model.addVars([(int(i), j, k) for i in N for j in D for k in D if k >= j], vtype=GRB.BINARY, name = 'r')
+
+    # DV 5
+    z = model.addVars([(int(i), j, k) for i in N for j in W_n[i] for k in W_n[i] if k >= j], vtype=GRB.BINARY, name = 'z')
+
+    # Random objective
+    model.setObjective(quicksum(x[i,j,k] for i in N for j in shift_types for k in D), GRB.MINIMIZE)
+
+    model.optimize()
+    for v in model.getVars():
+        print(str(v.varName) + " = " + str(v.x))
+
+
+#N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
 params = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
+lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'])
