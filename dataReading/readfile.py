@@ -294,6 +294,28 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
 
     # Last four parameters??
 
+    # Max number of complete weekends and corresponding weight
+    max_comp_WE = {}
+    w_max_comp_WE = {}
+    
+    for i in range(1, n_nurses + 1):
+        max_comp_WE[i] = []
+        w_max_comp_WE[i] = []
+        
+        max_comp_WE[i].append(contr_param.iloc[9][int(nurse_contracts[i-1])][0])
+        w_max_comp_WE[i].append(contr_param.iloc[9][int(nurse_contracts[i-1])][1])
+        
+    # Number of identical shifts during complete weekends and corresponding weight
+    max_ident_shifts_comp_WE = {}
+    w_max_ident_shifts_comp_WE = {}
+    
+    for i in range(1, n_nurses + 1):
+        max_ident_shifts_comp_WE[i] = []
+        w_max_ident_shifts_comp_WE[i] = []
+        
+        max_ident_shifts_comp_WE[i].append(contr_param.iloc[10][int(nurse_contracts[i-1])][0])
+        w_max_ident_shifts_comp_WE[i].append(contr_param.iloc[10][int(nurse_contracts[i-1])][1])
+ 
 
     #return N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in
     return {
@@ -310,7 +332,11 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'y_high_in': y_high_in,
         'w_a_in': w_a_in,
         'w_b_in': w_b_in,
-        'w_log_in': w_log_in
+        'w_log_in': w_log_in,
+        'max_comp_WE': max_comp_WE,
+        'w_max_comp_WE': w_max_comp_WE,
+        'max_ident_shifts_comp_WE': max_ident_shifts_comp_WE,
+        'w_max_ident_shifts_comp_WE': w_max_ident_shifts_comp_WE
     }
 
 def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in):
@@ -384,7 +410,7 @@ def find_runs(x):
 
 ##### Defining the objective function with the soft constraints #####
 
-def penalty_per_nurse(solution, nurse_index, params):
+def penalty_per_nurse(solution, nurse_index, params, contr_param):
     # Define nurse key
     nurse_key = nurse_index + 1
     
@@ -448,7 +474,18 @@ def penalty_per_nurse(solution, nurse_index, params):
         penalty += params['w_b_in'][nurse_key][3]
     
     # Complete weekends
-    
+    complete_weekends = np.zeros(len(params['W_n'][nurse_key]))
+    for i in range(len(params['W_n'][nurse_key])):
+        weekend = params['D_in'][nurse_key][i]
+        working_days_WE_i = 0
+        for weekendday in weekend:
+            if working_days[weekendday] > 0:
+                working_days_WE_i += 1
+        if working_days_WE_i == 2:
+            complete_weekends[i] = 1
+    if np.sum(complete_weekends) > params['max_comp_WE'][nurse_key][0]:
+        penalty += params['w_max_comp_WE'][nurse_key][0]
+        
     # Identical shifts during complete weekends
     
     # Single assignement per day
@@ -484,9 +521,9 @@ for nurse in range(n_nurses):
             pos = np.random.randint(0, n_shift_types)  # Randomly select a position in the third dimension
             current_solution[nurse, day, pos] = 1
 
-print(current_solution)
+#print(current_solution)
 
-test_penalty = penalty_per_nurse(current_solution, 1, params)
+test_penalty = penalty_per_nurse(current_solution, 1, params, contr_param)
 print(test_penalty)
 
 '''
