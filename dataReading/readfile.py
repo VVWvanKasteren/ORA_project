@@ -292,7 +292,19 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
     print(w_log_in)
     print("")
 
-    # Last four parameters??
+    # Last four parameters
+    # - Sigma:
+        # Explanation: Penalty for breaking max/min consec workdays and complete WEs
+        # Status: Done (see previous and following sections)
+    # - Tau:
+        # Explanation: Penalty for breaking max/min consec freedays
+        # Status: Done (see previous section)
+    # - Psi:
+        # Explanation: Penalty for complete weekends
+        # Status: Done (see following section)
+    # - Nu:
+        # Explanation: Penalty for breaking shift on/off request
+        # Status: tbd
 
     # Max number of complete weekends and corresponding weight
     max_comp_WE = {}
