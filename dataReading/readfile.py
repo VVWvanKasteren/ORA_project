@@ -384,7 +384,7 @@ def find_runs(x):
 
 ##### Defining the objective function with the soft constraints #####
 
-def penalty_per_nurse(solution, nurse_index, parameters):
+def penalty_per_nurse(solution, nurse_index, params):
     # Define nurse key
     nurse_key = nurse_index + 1
     
@@ -417,7 +417,7 @@ def penalty_per_nurse(solution, nurse_index, parameters):
     for value, start, length in zip(wdays_values, wdays_starts, wdays_length):
         if value == 1 and length < min_consec_wdays:
             penalty += (min_consec_wdays - length) * params['w_a_in'][nurse_key][2]
-    
+            
     # Maximum number of consecutive free days
     max_consec_fdays = params['y_high_in'][nurse_key][1]
     for value, start, length in zip(wdays_values, wdays_starts, wdays_length):
@@ -429,12 +429,27 @@ def penalty_per_nurse(solution, nurse_index, parameters):
     for value, start, length in zip(wdays_values, wdays_starts, wdays_length):
         if value == 0 and length < min_consec_fdays:
             penalty += (min_consec_fdays - length) * params['w_a_in'][nurse_key][1]
-    
+            
     # Maximum number of consecutive working weekends
+    working_weekends = np.zeros(len(params['W_n'][nurse_key]))
+    for i in range(len(params['W_n'][nurse_key])):
+        weekend = params['D_in'][nurse_key][i]
+        for weekendday in weekend:
+            if working_days[weekendday] > 0:
+                working_weekends[i] = 1
+    weekends_values, weekends_starts, weekends_lenght = find_runs(working_weekends)
+    max_consec_work_weekends = params['y_high_in'][nurse_key][4]
+    for value, start, length in zip(weekends_values, weekends_starts, weekends_lenght):
+        if value == 1 and length > max_consec_work_weekends:
+            penalty += (length - max_consec_work_weekends) * params['w_b_in'][nurse_key][4]
+                
+    # Maximum number of weekends in four weeks
+    if np.sum(working_weekends) > params['y_high_in'][nurse_key][3]:
+        penalty += params['w_b_in'][nurse_key][3]
     
     # Complete weekends
     
-    # Identical complete weekends
+    # Identical shifts during complete weekends
     
     # Single assignement per day
     
@@ -460,7 +475,16 @@ def penalty_per_nurse(solution, nurse_index, parameters):
 # Solution assignment of the following form:
     # [nurse][day][shift type] = 1 if shift is assigned to nurse; 0 otherwise
 
-current_solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types])
+current_solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
+
+# Random assignement for testing purposes
+for nurse in range(n_nurses):
+    for day in range(n_days):
+        if np.random.rand() > 0.2:  # Randomly decide whether to place a 1
+            pos = np.random.randint(0, n_shift_types)  # Randomly select a position in the third dimension
+            current_solution[nurse, day, pos] = 1
+
+print(current_solution)
 
 test_penalty = penalty_per_nurse(current_solution, 1, params)
 print(test_penalty)
