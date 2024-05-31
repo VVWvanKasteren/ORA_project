@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Apr 23 22:55:13 2024
-
-@author: S_Schreuder
-"""
-
 import numpy as np
 import ast
 import pandas as pd
@@ -391,8 +384,6 @@ def find_runs(x):
 
 ##### Defining the objective function with the soft constraints #####
 
-#[NumAss,ConsecFreeDays,ConsecWorkDays,WorkWEIn4Weeks,ConsecWorkWE]
-
 def penalty_per_nurse(solution, nurse_index, parameters):
     # Define nurse key
     nurse_key = nurse_index + 1
@@ -428,8 +419,16 @@ def penalty_per_nurse(solution, nurse_index, parameters):
             penalty += (min_consec_wdays - length) * params['w_a_in'][nurse_key][2]
     
     # Maximum number of consecutive free days
-    
+    max_consec_fdays = params['y_high_in'][nurse_key][1]
+    for value, start, length in zip(wdays_values, wdays_starts, wdays_length):
+        if value == 0 and length > max_consec_fdays:
+            penalty += (length - max_consec_fdays) * params['w_b_in'][nurse_key][1]
+            
     # Minimum number of consecutive free days
+    min_consec_fdays = params['y_low_in'][nurse_key][1]
+    for value, start, length in zip(wdays_values, wdays_starts, wdays_length):
+        if value == 0 and length < min_consec_fdays:
+            penalty += (min_consec_fdays - length) * params['w_a_in'][nurse_key][1]
     
     # Maximum number of consecutive working weekends
     
