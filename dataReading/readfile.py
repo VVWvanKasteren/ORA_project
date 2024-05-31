@@ -414,7 +414,18 @@ def penalty_per_nurse(solution, nurse_index, parameters):
     for i in range(np.amax(params['D'])):
         if np.sum(solution[nurse_index,i,:]) > 0:
             working_days[i] = 1
+    # Find the number of consecutive working days and compare it with the allowed value
+    wdays_values, wdays_starts, wdays_length = find_runs(working_days)
+    max_consec_wdays = params['y_high_in'][nurse_key][2]
+    for value, start, length in zip(wdays_values, wdays_starts, wdays_length):
+        if value == 1 and length > max_consec_wdays:
+            penalty += (length - max_consec_wdays) * params['w_b_in'][nurse_key][2]
+    
     # Minimum number of consecutive working days
+    min_consec_wdays = params['y_low_in'][nurse_key][2]
+    for value, start, length in zip(wdays_values, wdays_starts, wdays_length):
+        if value == 1 and length < min_consec_wdays:
+            penalty += (min_consec_wdays - length) * params['w_a_in'][nurse_key][2]
     
     # Maximum number of consecutive free days
     
