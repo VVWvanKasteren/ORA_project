@@ -410,7 +410,7 @@ def find_runs(x):
 
 ##### Defining the objective function with the soft constraints #####
 
-def penalty_per_nurse(solution, nurse_index, params, contr_param):
+def penalty_per_nurse(solution, nurse_index, params):
     # Define nurse key
     nurse_key = nurse_index + 1
     
@@ -523,7 +523,7 @@ for nurse in range(n_nurses):
 
 #print(current_solution)
 
-test_penalty = penalty_per_nurse(current_solution, 1, params, contr_param)
+test_penalty = penalty_per_nurse(current_solution, 1, params)
 print(test_penalty)
 
 '''
