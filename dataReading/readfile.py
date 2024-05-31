@@ -411,12 +411,9 @@ def penalty_per_nurse(solution, nurse_index, parameters):
     # Maximum number of consecutive working days
     # Create array with days -> 1 if working, 0 otherwise
     working_days = np.zeros(np.amax(params['D']))
-    print(working_days)
     for i in range(np.amax(params['D'])):
-        print(i)
         if np.sum(solution[nurse_index,i,:]) > 0:
-            z = 1
-            #working_days[i] = 1
+            working_days[i] = 1
     # Minimum number of consecutive working days
     
     # Maximum number of consecutive free days
@@ -453,17 +450,10 @@ def penalty_per_nurse(solution, nurse_index, parameters):
 # Solution assignment of the following form:
     # [nurse][day][shift type] = 1 if shift is assigned to nurse; 0 otherwise
 
-current_solution = np.zeros([n_nurses, day, n_shift_types])
+current_solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types])
 
 test_penalty = penalty_per_nurse(current_solution, 1, params)
 print(test_penalty)
-
-working_days = np.zeros(np.amax(params['D']))
-print(working_days)
-for i in range(np.amax(params['D'])):
-    print(i)
-    if np.sum(current_solution[1,i,:]) > 0:
-        working_days[i] = 1
 
 '''
 for day in range(demand.shape[0]):
