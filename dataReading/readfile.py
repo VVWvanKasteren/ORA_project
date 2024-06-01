@@ -539,7 +539,7 @@ def penalty_per_nurse(solution, nurse_index, params):
         if working_days_WE_i == 2:
             complete_weekends[i] = 1
     if np.sum(complete_weekends) > params['max_comp_WE'][nurse_key][0]:
-        penalty += params['w_max_comp_WE'][nurse_key][0]
+        penalty += params['w_max_comp_WE'][nurse_key][1] #changed to 1, revert if wrong
         
     # Identical shifts during complete weekends
     num_ident_shifts_comp_WE = 0
@@ -551,7 +551,7 @@ def penalty_per_nurse(solution, nurse_index, params):
             if np.array_equal(solution[nurse_index, Sat], solution[nurse_index, Sun]):
                 num_ident_shifts_comp_WE += 1
     if num_ident_shifts_comp_WE > params['max_ident_shifts_comp_WE'][nurse_key][0]:
-        penalty += params['w_max_ident_shifts_comp_WE'][nurse_key][0]
+        penalty += params['w_max_ident_shifts_comp_WE'][nurse_key][1]
     
     # No night shift before free weekend
     noNightShiftBeforeFreeWeekend = 0
@@ -566,9 +566,12 @@ def penalty_per_nurse(solution, nurse_index, params):
                     if solution[nurse_index, fri, 0] != 0: #zero index for night shift
                         noNightShiftBeforeFreeWeekend += 1
     if noNightShiftBeforeFreeWeekend > params['NoNShiftBeforeFreeWE'][nurse_key][0]:
-        penalty += params['NoNShiftBeforeFreeWE'][nurse_key][0]
+        penalty += params['NoNShiftBeforeFreeWE'][nurse_key][1]
     
     # Alternative skill
+    altSkills = 0
+    for i in range(len(params['AltSkills'][nurse_key])):
+        altSkills = i # complete
     
     # No Friday off, if working on Sat and Sun
     nofridayOffIfWorkingSatAndSun = 0
@@ -583,7 +586,7 @@ def penalty_per_nurse(solution, nurse_index, params):
                     if np.all(solution[nurse_index, fri] == 0):
                         nofridayOffIfWorkingSatAndSun += 1
     if nofridayOffIfWorkingSatAndSun > params['NoFriOffIfSatSun'][nurse_key][0]:
-        penalty += params['NoFriOffIfSatSun'][nurse_key][0]
+        penalty += params['NoFriOffIfSatSun'][nurse_key][1]
 
     # Requested day on/off
     # Dealt with in 'Requested shift on/off'
