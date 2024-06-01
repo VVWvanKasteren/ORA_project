@@ -360,7 +360,7 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'S_b': S_b,
         'D': D,
         'Pi': Pi,
-        'W_n': W,
+        'W_n': W_n,
         'D_in': D_in,
         'P_shifts': P_shifts,
         'y_low_in': y_low_in,
