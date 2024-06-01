@@ -602,8 +602,23 @@ def penalty_per_nurse(solution, nurse_index, params):
         penalty += sumproduct
     
     # Unwanted patterns
-    
-    
+    # Shift order in solution: N E D L
+    mapping = {'N': 0, 'E': 1, 'D': 2, 'L': 3}
+    unw_pat_index = 0
+    for unw_pat in params['unwanted_patterns'][nurse_key][0]:
+        num_unw_pat = [mapping[element] for element in unw_pat]
+        considered_days = len(unw_pat)
+        for day1 in range(np.amax(params['D']) - (considered_days - 1)):
+            all_days_match = True
+            for day_offset in range(considered_days):
+                if solution[nurse_index, day1 + day_offset, num_unw_pat[day_offset]] != 1:
+                    all_days_match = False
+                    break
+            if all_days_match:
+                penalty += params['w_unwanted_patterns'][nurse_key][0][unw_pat_index]
+        unw_pat_index += 1
+        
+    # Return total penalty
     return penalty
 
 ##### Creating a good initial solution #####
