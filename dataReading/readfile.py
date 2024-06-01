@@ -351,6 +351,20 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         NoFriOffIfSatSun[i] = []
         NoFriOffIfSatSun[i].append(contr_param.iloc[13][int(nurse_contracts[i-1])][0])
         NoFriOffIfSatSun[i].append(contr_param.iloc[13][int(nurse_contracts[i-1])][1])
+
+    # Shift-off requests
+    #Already defined previously
+    #shift_off_reqs
+    
+    # Unwanted patterns
+    
+    unwanted_patterns = {}
+    w_unwanted_patterns = {}
+    for i in range(1, n_nurses + 1):
+        unwanted_patterns[i] = []
+        w_unwanted_patterns[i] = []
+        unwanted_patterns[i].append(unw_pats[int(nurse_contracts[i-1])])
+        w_unwanted_patterns[i].append(w_unw_pats[int(nurse_contracts[i-1])])
         
     #return N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in
     return {
@@ -374,7 +388,10 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'w_max_ident_shifts_comp_WE': w_max_ident_shifts_comp_WE,
         'NoNShiftBeforeFreeWE': NoNShiftBeforeFreeWE,
         'AltSkills': AltSkills,
-        'NoFriOffIfSatSun': NoFriOffIfSatSun
+        'NoFriOffIfSatSun': NoFriOffIfSatSun,
+        'shift_off_reqs': shift_off_reqs,
+        'unwanted_patterns': unwanted_patterns,
+        'w_unwanted_patterns': w_unwanted_patterns
     }
 
 def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in):
@@ -556,6 +573,7 @@ def penalty_per_nurse(solution, nurse_index, params):
     # No Friday off, if working on Sat and Sun
     
     # Requested day on/off
+    # Dealt with in 'Requested shift on/off'
     
     # Requested shift on/off
     
