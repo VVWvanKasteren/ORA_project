@@ -558,12 +558,12 @@ def penalty_per_nurse(solution, nurse_index, params):
     for i in range(len(complete_weekends)):
         if complete_weekends[i] == 1:
             weekend = params['D_in'][nurse_key][i]
-            Sat = weekend[0]
-            Sun = weekend[1]
-            if Sat > 1:
-                Fri = weekend[0] - 1
-                if np.all(solution[nurse_index, Sat] == 0) & np.all(solution[nurse_index, Sun] == 0):
-                    if solution[nurse_index, Fri, 2] != 0:
+            sat = weekend[0]
+            sun = weekend[1]
+            if sat > 1:
+                fri = weekend[0] - 1
+                if np.all(solution[nurse_index, sat] == 0) & np.all(solution[nurse_index, sun] == 0):
+                    if solution[nurse_index, fri, 0] != 0: #zero index for night shift
                         noNightShiftBeforeFreeWeekend += 1
     if noNightShiftBeforeFreeWeekend > params['NoNShiftBeforeFreeWE'][nurse_key][0]:
         penalty += params['NoNShiftBeforeFreeWE'][nurse_key][0]
@@ -571,7 +571,20 @@ def penalty_per_nurse(solution, nurse_index, params):
     # Alternative skill
     
     # No Friday off, if working on Sat and Sun
-    
+    nofridayOffIfWorkingSatAndSun = 0
+    for i in range(len(complete_weekends)):
+        if complete_weekends[i] == 1:
+            weekend = params['D_in'][nurse_key][i]
+            sat = weekend[0]
+            sun = weekend[1]
+            if sat > 1:
+                fri = weekend[0] - 1
+                if np.any(solution[nurse_index, sat] == 1) & np.any(solution[nurse_index, sun] == 1):
+                    if np.all(solution[nurse_index, fri] == 0):
+                        nofridayOffIfWorkingSatAndSun += 1
+    if nofridayOffIfWorkingSatAndSun > params['NoFriOffIfSatSun'][nurse_key][0]:
+        penalty += params['NoFriOffIfSatSun'][nurse_key][0]
+
     # Requested day on/off
     # Dealt with in 'Requested shift on/off'
     
