@@ -537,6 +537,19 @@ def penalty_per_nurse(solution, nurse_index, params):
         penalty += params['w_max_ident_shifts_comp_WE'][nurse_key][0]
     
     # No night shift before free weekend
+    noNightShiftBeforeFreeWeekend = 0
+    for i in range(len(complete_weekends)):
+        if complete_weekends[i] == 1:
+            weekend = params['D_in'][nurse_key][i]
+            Sat = weekend[0]
+            Sun = weekend[1]
+            if Sat > 1:
+                Fri = weekend[0] - 1
+                if np.all(solution[nurse_index, Sat] == 0) & np.all(solution[nurse_index, Sun] == 0):
+                    if solution[nurse_index, Fri, 2] != 0:
+                        noNightShiftBeforeFreeWeekend += 1
+    if noNightShiftBeforeFreeWeekend > params['NoNShiftBeforeFreeWE'][nurse_key][0]:
+        penalty += params['NoNShiftBeforeFreeWE'][nurse_key][0]
     
     # Alternative skill
     
