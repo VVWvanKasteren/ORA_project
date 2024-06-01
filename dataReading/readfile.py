@@ -551,7 +551,7 @@ def penalty_per_nurse(solution, nurse_index, params):
             if np.array_equal(solution[nurse_index, Sat], solution[nurse_index, Sun]):
                 num_ident_shifts_comp_WE += 1
     if num_ident_shifts_comp_WE > params['max_ident_shifts_comp_WE'][nurse_key][0]:
-        penalty += params['w_max_ident_shifts_comp_WE'][nurse_key][1]
+        penalty += params['w_max_ident_shifts_comp_WE'][nurse_key][0]
     
     # No night shift before free weekend
     noNightShiftBeforeFreeWeekend = 0
