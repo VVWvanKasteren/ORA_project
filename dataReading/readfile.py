@@ -536,18 +536,17 @@ def penalty_per_nurse(solution, nurse_index, params):
     if num_ident_shifts_comp_WE > params['max_ident_shifts_comp_WE'][nurse_key][0]:
         penalty += params['w_max_ident_shifts_comp_WE'][nurse_key][0]
     
-    # Single assignement per day
+    # No night shift before free weekend
     
-    # Two free days after a night shift
+    # Alternative skill
+    
+    # No Friday off, if working on Sat and Sun
     
     # Requested day on/off
     
     # Requested shift on/off
     
-    # Alternative skill
-    
     # Unwanted patterns
-    # Unwanted shift patterns
     
     
     return penalty
