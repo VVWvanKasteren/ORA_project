@@ -328,7 +328,30 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         max_ident_shifts_comp_WE[i].append(contr_param.iloc[10][int(nurse_contracts[i-1])][0])
         w_max_ident_shifts_comp_WE[i].append(contr_param.iloc[10][int(nurse_contracts[i-1])][1])
  
-
+    # No night shift before free weekend
+    
+    NoNShiftBeforeFreeWE = {}
+    for i in range(1, n_nurses + 1):
+        NoNShiftBeforeFreeWE[i] = []
+        NoNShiftBeforeFreeWE[i].append(contr_param.iloc[11][int(nurse_contracts[i-1])][0])
+        NoNShiftBeforeFreeWE[i].append(contr_param.iloc[11][int(nurse_contracts[i-1])][1])
+    
+    # Alternative skills
+    
+    AltSkills = {}
+    for i in range(1, n_nurses + 1):
+        AltSkills[i] = []
+        AltSkills[i].append(contr_param.iloc[12][int(nurse_contracts[i-1])][0])
+        AltSkills[i].append(contr_param.iloc[12][int(nurse_contracts[i-1])][1])
+    
+    # No Friday off, if working on Sat and Sun
+    
+    NoFriOffIfSatSun = {}
+    for i in range(1, n_nurses + 1):
+        NoFriOffIfSatSun[i] = []
+        NoFriOffIfSatSun[i].append(contr_param.iloc[13][int(nurse_contracts[i-1])][0])
+        NoFriOffIfSatSun[i].append(contr_param.iloc[13][int(nurse_contracts[i-1])][1])
+        
     #return N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in
     return {
         'N': N,
@@ -337,7 +360,7 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'S_b': S_b,
         'D': D,
         'Pi': Pi,
-        'W_n': W_n,
+        'W_n': W,
         'D_in': D_in,
         'P_shifts': P_shifts,
         'y_low_in': y_low_in,
@@ -348,7 +371,10 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'max_comp_WE': max_comp_WE,
         'w_max_comp_WE': w_max_comp_WE,
         'max_ident_shifts_comp_WE': max_ident_shifts_comp_WE,
-        'w_max_ident_shifts_comp_WE': w_max_ident_shifts_comp_WE
+        'w_max_ident_shifts_comp_WE': w_max_ident_shifts_comp_WE,
+        'NoNShiftBeforeFreeWE': NoNShiftBeforeFreeWE,
+        'AltSkills': AltSkills,
+        'NoFriOffIfSatSun': NoFriOffIfSatSun
     }
 
 def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in):
