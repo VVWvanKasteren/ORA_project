@@ -577,6 +577,14 @@ def penalty_per_nurse(solution, nurse_index, params):
     
     # Requested shift on/off
     
+    for day in range(np.amax(params['D'])):
+        # Since a nurse can at most be assigned to one shift per day, and a
+        # nurse has a penalty of 0 if she is fine with having certain shift, it
+        # is sufficient to take the sumproduct of both arrays as penalty.
+        product = solution[nurse_index, day] * params['shift_off_reqs'][nurse_key][day]
+        sumproduct = np.sum(product)
+        penalty += sumproduct
+    
     # Unwanted patterns
     
     
