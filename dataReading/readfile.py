@@ -304,7 +304,7 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         # Status: Done (see following section)
     # - Nu:
         # Explanation: Penalty for breaking shift on/off request
-        # Status: tbd
+        # Status: Done (defined below in section 'Shift-off requests')
 
     # Max number of complete weekends and corresponding weight
     max_comp_WE = {}
@@ -539,7 +539,7 @@ def penalty_per_nurse(solution, nurse_index, params):
         if working_days_WE_i == 2:
             complete_weekends[i] = 1
     if np.sum(complete_weekends) > params['max_comp_WE'][nurse_key][0]:
-        penalty += params['w_max_comp_WE'][nurse_key][1] #changed to 1, revert if wrong
+        penalty += params['w_max_comp_WE'][nurse_key][0]
         
     # Identical shifts during complete weekends
     num_ident_shifts_comp_WE = 0
