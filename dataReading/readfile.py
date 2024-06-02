@@ -222,6 +222,15 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
 
     print(f"D_in: {D_in}\n")
 
+    #l_in parameter
+    l_in = {}
+    for i in N:
+        l_in[i] = []
+        for j in W_n[i]:
+            l_in[i].append(D_in[i][j-1][0]-1)
+
+    print(f"l_in: {l_in}\n")
+
     # P_n (shifts) parameter
     P_shifts = {}
 
@@ -376,6 +385,7 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'Pi': Pi,
         'W_n': W_n,
         'D_in': D_in,
+        'l_in': l_in,
         'P_shifts': P_shifts,
         'y_low_in': y_low_in,
         'y_high_in': y_high_in,
@@ -394,7 +404,7 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'w_unwanted_patterns': w_unwanted_patterns
     }
 
-def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in):
+def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in):
 
     model=Model('nrp')
     model.setParam('OutputFlag', True)
@@ -404,29 +414,115 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_hig
     x = model.addVars(N, shift_types, D, vtype=GRB.BINARY, name = 'x')
 
     # DV 2
-    for i in N:
-        y = model.addVars(N, W_n[i], vtype=GRB.BINARY, name = 'y')
+    y = model.addVars([(i,j) for i in N for j in W_n[i]], vtype=GRB.BINARY, name = 'y')
 
     # DV 3
-    w = model.addVars([(int(i), j, k) for i in N for j in D for k in D if k >= j], vtype=GRB.BINARY, name = 'w')
+    w = model.addVars([(i, j, k) for i in N for j in D for k in D if k >= j], vtype=GRB.BINARY, name = 'w')
 
     # DV 4
-    r = model.addVars([(int(i), j, k) for i in N for j in D for k in D if k >= j], vtype=GRB.BINARY, name = 'r')
+    r = model.addVars([(i, j, k) for i in N for j in D for k in D if k >= j], vtype=GRB.BINARY, name = 'r')
 
     # DV 5
-    z = model.addVars([(int(i), j, k) for i in N for j in W_n[i] for k in W_n[i] if k >= j], vtype=GRB.BINARY, name = 'z')
+    z = model.addVars([(i, j, k) for i in N for j in W_n[i] for k in W_n[i] if k >= j], vtype=GRB.BINARY, name = 'z')
+
+    # Slack variables
+    alphaLower_1 = model.addVars([(i,1) for i in N], vtype=GRB.INTEGER, name = 'alphaLower_1')
+    alphaUpper_1 = model.addVars([(i,1) for i in N], vtype=GRB.INTEGER, name = 'alphaUpper_1')
+
+    alphaLower_4 = model.addVars([(i, j, 4) for i in N for j in W_n[i]], vtype=GRB.INTEGER, name = 'alphaLower_4')
+    alphaUpper_4 = model.addVars([(i, j, 4) for i in N for j in W_n[i]], vtype=GRB.INTEGER, name = 'alphaUpper_4')
+
+    alpha_8 = model.addVars([(i, j, 8) for i in N for j in W_n[i]], vtype=GRB.BINARY, name = 'alpha_8')
+
+    alpha_9 = model.addVars([(i, j, k, 9) for i in N for j in D for k in D if k>=j], vtype=GRB.BINARY, name = 'alpha_9')
 
     # Random objective
     model.setObjective(quicksum(x[i,j,k] for i in N for j in shift_types for k in D), GRB.MINIMIZE)
 
+    # Hard constraint I: demand
+    for j in shift_types:
+        for k in D:
+            model.addConstr(quicksum(x[i, j, k] for i in N) == int(demand.loc[k-1][j]))
+
+    # Hard constraint II: One shift per day
+    for i in N:
+        for k in D:
+            model.addConstr(quicksum(x[i, j, k] for j in shift_types) <= 1)
+
+    # Article constraint (3): Initialize working weekends DV
+    for i in N:
+        for v in W_n[i]:
+            for k in D_in[i][v-1]:
+                model.addConstr(y[i, v] >= (quicksum(x[i, j, k] for j in shift_types)))
+
+    # Article constraint (4)
+    for i in N:
+        for v in W_n[i]:
+            model.addConstr(y[i, v] <= (quicksum(x[i, j, k] for j in shift_types for k in D_in[i][v-1])))
+
+    # Article constraint (5)
+    for i in N:
+        for k in D:
+            model.addConstr(quicksum(x[i, j, k] for j in shift_types) == quicksum(w[i, q, t] for q in D for t in D if t >= q and k >= q and k <= t))
+
+    # Article constraint (6)
+    for i in N:
+        for k in D:
+            model.addConstr(quicksum(x[i, j, k] for j in shift_types) == 1 - quicksum(r[i, q, t] for q in D for t in D if t >= q and k >= q and k <= t))
+
+    # Article constraint (7)
+    for i in N:
+        for k in D:
+            model.addConstr(quicksum((r[i, q, t] + w[i, q, t]) for q in D for t in D if t >= q and k >= q and k <= t) == 1)
+
+    # Article constraint (8)
+    for i in N:
+        for k in D:
+            model.addConstr(quicksum(w[i, q, k] for q in D if q <= k) + quicksum(w[i, k+1, t] for t in D if t >= k+1) <= 1)
+
+    # Article constraint (9)
+    for i in N:
+        for k in D:
+            model.addConstr(quicksum(r[i, q, k] for q in D if q <= k) + quicksum(r[i, k+1, t] for t in D if t >= k+1) <= 1)
+
+    # Article constraint (10)
+    for i in N:
+        model.addConstr(y_low_in[i][0] - alphaLower_1[i,1] <= quicksum(x[i, j, k] for j in shift_types for k in D))
+    for i in N:
+        model.addConstr(quicksum(x[i, j, k] for j in shift_types for k in D) <= y_high_in[i][0] - alphaUpper_1[i,1])
+
+    # Article constraint (11)
+    for i in N:
+        for v in range(1, W_n[i][-1]-3):
+            model.addConstr(quicksum(y[i,t] for t in range(v, v+3)) <= y_high_in[i][3] + alphaUpper_4[i,v,4])
+
+    # Article constraint (12)
+    # Does not exist in our setting
+
+    # Article constraint (13)
+    for i in N:
+        for v in W_n[i]:
+            model.addConstr(x[i, 'N', l_in[i][v-1]+1] - y[i,v] <= alpha_8[i, v, 8])
+
+    # Article constraint 14
+    for i in N:
+        for j in shift_types:
+            for v in W_n[i]:
+                model.addConstr(alpha_9[i, D_in[i][v-1][0], D_in[i][v-1][1], 9] >= x[i,j,D_in[i][v-1][0]] - x[i,j,D_in[i][v-1][1]])
+
+
     model.optimize()
-    for v in model.getVars():
-        print(str(v.varName) + " = " + str(v.x))
+
+    if model.SolCount >= 1:
+        for v in model.getVars():
+            print(str(v.varName) + " = " + str(v.x))
+    else:
+        print("No feasible solution found")
 
 
 #N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
 params = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
-lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'])
+lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['l_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'])
 
 """
 In order to check the soft constraints related to consecutive days or weekends,
@@ -631,12 +727,17 @@ def greedy_initial_solution(demand, solution, params):
                 # Calculate the penalty score for every nurse if they were
                 # assigned to that shift
                 for nurse in range(len(params['N'])):
-                    if not solution[nurse, day].any(): # Only consider nurses not already assigned to a shift that day
-                        pen_before_assignm = penalty_per_nurse(solution, nurse, params)
+                    '''
+                    noShiftYet = True
+                    for i in solution[nurse, day]:
+                        if i == 1:
+                            noShiftYet = False
+                    if noShiftYet == True: # # Only consider nurses not already assigned to a shift this day
+                    '''
+                    if not solution[nurse, day].any():
                         solution[nurse, day, shift_index] = 1
-                        pen_after_assignm = penalty_per_nurse(solution, nurse, params)
+                        penalties[nurse] = penalty_per_nurse(solution, nurse, params)
                         solution[nurse, day, shift_index] = 0 # reset because you only want to keep for smallest penalty
-                        penalties[nurse] = pen_after_assignm - pen_before_assignm
                 # Select the nurse with the smallest penalty
                 # and assign her to the shift
                 best_nurse = np.argmin(penalties)
@@ -647,8 +748,21 @@ def greedy_initial_solution(demand, solution, params):
 
 solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
 
-initial_solution = greedy_initial_solution(demand, solution, params)
-for i in range(len(initial_solution)):
-    print(initial_solution[i])
+'''
+# Random assignement for testing purposes
+for nurse in range(n_nurses):
+    for day in range(n_days):
+        if np.random.rand() > 0.2:  # Randomly decide whether to place a 1
+            pos = np.random.randint(0, n_shift_types)  # Randomly select a position in the third dimension
+            solution[nurse, day, pos] = 1
 
-print(np.zeros(4).astype(int))
+
+test_penalty = penalty_per_nurse(solution, 1, params)
+print(test_penalty)
+'''
+
+initial_solution = greedy_initial_solution(demand, solution, params)
+#for i in range(len(initial_solution)):
+    #print(initial_solution[i])
+
+
