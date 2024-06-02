@@ -569,9 +569,6 @@ def penalty_per_nurse(solution, nurse_index, params):
         penalty += params['NoNShiftBeforeFreeWE'][nurse_key][1]
     
     # Alternative skill
-    altSkills = 0
-    for i in range(len(params['AltSkills'][nurse_key])):
-        altSkills = i # complete
     
     # No Friday off, if working on Sat and Sun
     nofridayOffIfWorkingSatAndSun = 0
@@ -585,7 +582,7 @@ def penalty_per_nurse(solution, nurse_index, params):
                     nofridayOffIfWorkingSatAndSun += 1
     if nofridayOffIfWorkingSatAndSun > params['NoFriOffIfSatSun'][nurse_key][0]:
         penalty += params['NoFriOffIfSatSun'][nurse_key][1]
-
+    
     # Requested day on/off
     # Dealt with in 'Requested shift on/off'
     
@@ -595,10 +592,10 @@ def penalty_per_nurse(solution, nurse_index, params):
         # Since a nurse can at most be assigned to one shift per day, and a
         # nurse has a penalty of 0 if she is fine with having certain shift, it
         # is sufficient to take the sumproduct of both arrays as penalty.
-        product = solution[nurse_index, day] * params['shift_off_reqs'][nurse_key][day]
+        product = solution[nurse_index, day] * params['shift_off_reqs'][nurse_index][day]
         sumproduct = np.sum(product)
         penalty += sumproduct
-    
+        
     # Unwanted patterns
     # Shift order in solution: N E D L
     mapping = {'N': 0, 'E': 1, 'D': 2, 'L': 3}
@@ -621,37 +618,44 @@ def penalty_per_nurse(solution, nurse_index, params):
 
 ##### Creating a good initial solution #####
 
-# Calculate initial potential penalities of assigning a nurse to a shift
-
-
 # Solution assignment of the following form:
     # [nurse][day][shift type] = 1 if shift is assigned to nurse; 0 otherwise
 
-current_solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
+def greedy_initial_solution(demand, solution, params):
+    for day in range(demand.shape[0]):
+        for shift_index, shift in enumerate(demand.columns):
+            required_demand = demand.loc[day][shift]
+            assigned_nurses = np.sum(solution[:, day, shift_index])
+            while assigned_nurses < required_demand:
+                penalties = np.full(len(params['N']), np.inf)
+                # Calculate the penalty score for every nurse if they were
+                # assigned to that shift
+                for nurse in range(len(params['N'])):
+                    if solution[nurse, day, shift_index] == 0: # # Only consider nurses not already assigned to this shift
+                        solution[nurse, day, shift_index] = 1
+                        penalties[nurse] = penalty_per_nurse(solution, nurse, params)
+                        solution[nurse, day, shift_index] = 0 # reset because you only want to keep for smallest penalty
+                # Select the nurse with the smallest penalty
+                # and assign her to the shift
+                best_nurse = np.argmin(penalties)
+                solution[best_nurse, day, shift_index] = 1
+                assigned_nurses = np.sum(solution[:, day, shift_index])
+                
+    return solution
 
+solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
+
+'''
 # Random assignement for testing purposes
 for nurse in range(n_nurses):
     for day in range(n_days):
         if np.random.rand() > 0.2:  # Randomly decide whether to place a 1
             pos = np.random.randint(0, n_shift_types)  # Randomly select a position in the third dimension
-            current_solution[nurse, day, pos] = 1
+            solution[nurse, day, pos] = 1
 
-#print(current_solution)
 
-test_penalty = penalty_per_nurse(current_solution, 1, params)
+test_penalty = penalty_per_nurse(solution, 1, params)
 print(test_penalty)
+'''
 
-'''
-for day in range(demand.shape[0]):
-    print(f"Day {day+1} demands:")
-    for shift in demand.columns:
-        print(f"  Shift {shift}: {demand.loc[day][shift]}")
-'''
-'''
-for day in range(demand.shape[0]):
-    for shift_index, shift in enumerate(demand.columns):
-        required_demand = demand.loc[day][shift]
-        assigned_nurses = np.sum(current_solution[:, day, shift_index])
-        if required_demand < assigned_nurses:
-            # assign nurse with the smallest penalty to the shift  
-'''
+initial_solution = greedy_initial_solution(demand, solution, params)
