@@ -510,6 +510,11 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
             for v in W_n[i]:
                 model.addConstr(alpha_9[i, D_in[i][v-1][0], D_in[i][v-1][1], 9] >= x[i,j,D_in[i][v-1][0]] - x[i,j,D_in[i][v-1][1]])
 
+    # Article constraint 15
+    for i in N:
+        for j in shift_types:
+            for v in W_n[i]:
+                model.addConstr(alpha_9[i, D_in[i][v-1][0], D_in[i][v-1][1], 9] >= x[i,j,D_in[i][v-1][1]] - x[i,j,D_in[i][v-1][0]])
 
     model.optimize()
 
