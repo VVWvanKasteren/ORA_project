@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Apr 23 22:55:13 2024
-
-@author: S_Schreuder
-"""
-
 import numpy as np
 import ast
 import pandas as pd
@@ -241,10 +234,10 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
     # ???
 
     # y_lowerb_in, y_upperb_in, w_a_in, w_b_in", w_log_in parameters
-    y_low_in = {}
-    y_high_in = {}
-    w_a_in = {}
-    w_b_in = {}
+    y_low_in = {} # [MinNumAssignments, MinConsecutiveFreeDays, MinConsecutiveWorkingDays, MinWorkingWeekendsInFourWeeks, MinConsecutiveWorkingWeekends]
+    y_high_in = {} # same structure as y_low_in
+    w_a_in = {} # weights for y_low_in; same structure
+    w_b_in = {} # weights for y_high_in; same structure
     w_log_in = {}
 
     for i in range(1, n_nurses+1):
@@ -299,8 +292,79 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
     print(w_log_in)
     print("")
 
-    # Last four parameters??
+    # Last four parameters
+    # - Sigma:
+    # Explanation: Penalty for breaking max/min consec workdays and complete WEs
+    # Status: Done (see previous and following sections)
+    # - Tau:
+    # Explanation: Penalty for breaking max/min consec freedays
+    # Status: Done (see previous section)
+    # - Psi:
+    # Explanation: Penalty for complete weekends
+    # Status: Done (see following section)
+    # - Nu:
+    # Explanation: Penalty for breaking shift on/off request
+    # Status: Done (defined below in section 'Shift-off requests')
 
+    # Max number of complete weekends and corresponding weight
+    max_comp_WE = {}
+    w_max_comp_WE = {}
+
+    for i in range(1, n_nurses + 1):
+        max_comp_WE[i] = []
+        w_max_comp_WE[i] = []
+
+        max_comp_WE[i].append(contr_param.iloc[9][int(nurse_contracts[i-1])][0])
+        w_max_comp_WE[i].append(contr_param.iloc[9][int(nurse_contracts[i-1])][1])
+
+    # Number of identical shifts during complete weekends and corresponding weight
+    max_ident_shifts_comp_WE = {}
+    w_max_ident_shifts_comp_WE = {}
+
+    for i in range(1, n_nurses + 1):
+        max_ident_shifts_comp_WE[i] = []
+        w_max_ident_shifts_comp_WE[i] = []
+
+        max_ident_shifts_comp_WE[i].append(contr_param.iloc[10][int(nurse_contracts[i-1])][0])
+        w_max_ident_shifts_comp_WE[i].append(contr_param.iloc[10][int(nurse_contracts[i-1])][1])
+
+    # No night shift before free weekend
+
+    NoNShiftBeforeFreeWE = {}
+    for i in range(1, n_nurses + 1):
+        NoNShiftBeforeFreeWE[i] = []
+        NoNShiftBeforeFreeWE[i].append(contr_param.iloc[11][int(nurse_contracts[i-1])][0])
+        NoNShiftBeforeFreeWE[i].append(contr_param.iloc[11][int(nurse_contracts[i-1])][1])
+
+    # Alternative skills
+
+    AltSkills = {}
+    for i in range(1, n_nurses + 1):
+        AltSkills[i] = []
+        AltSkills[i].append(contr_param.iloc[12][int(nurse_contracts[i-1])][0])
+        AltSkills[i].append(contr_param.iloc[12][int(nurse_contracts[i-1])][1])
+
+    # No Friday off, if working on Sat and Sun
+
+    NoFriOffIfSatSun = {}
+    for i in range(1, n_nurses + 1):
+        NoFriOffIfSatSun[i] = []
+        NoFriOffIfSatSun[i].append(contr_param.iloc[13][int(nurse_contracts[i-1])][0])
+        NoFriOffIfSatSun[i].append(contr_param.iloc[13][int(nurse_contracts[i-1])][1])
+
+    # Shift-off requests
+    #Already defined previously
+    #shift_off_reqs
+
+    # Unwanted patterns
+
+    unwanted_patterns = {}
+    w_unwanted_patterns = {}
+    for i in range(1, n_nurses + 1):
+        unwanted_patterns[i] = []
+        w_unwanted_patterns[i] = []
+        unwanted_patterns[i].append(unw_pats[int(nurse_contracts[i-1])])
+        w_unwanted_patterns[i].append(w_unw_pats[int(nurse_contracts[i-1])])
 
     #return N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in
     return {
@@ -317,7 +381,17 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'y_high_in': y_high_in,
         'w_a_in': w_a_in,
         'w_b_in': w_b_in,
-        'w_log_in': w_log_in
+        'w_log_in': w_log_in,
+        'max_comp_WE': max_comp_WE,
+        'w_max_comp_WE': w_max_comp_WE,
+        'max_ident_shifts_comp_WE': max_ident_shifts_comp_WE,
+        'w_max_ident_shifts_comp_WE': w_max_ident_shifts_comp_WE,
+        'NoNShiftBeforeFreeWE': NoNShiftBeforeFreeWE,
+        'AltSkills': AltSkills,
+        'NoFriOffIfSatSun': NoFriOffIfSatSun,
+        'shift_off_reqs': shift_off_reqs,
+        'unwanted_patterns': unwanted_patterns,
+        'w_unwanted_patterns': w_unwanted_patterns
     }
 
 def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in):
@@ -353,3 +427,247 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_hig
 #N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
 params = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
 lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'])
+
+"""
+In order to check the soft constraints related to consecutive days or weekends,
+we use the function find_runs(x). Credit goes to Alistair Miles. The original
+code can be found using the following link (last accessed on 30.05.2024):
+https://gist.github.com/alimanfoo/c5977e87111abe8127453b21204c1065
+"""
+
+def find_runs(x):
+    """Find runs of consecutive items in an array."""
+
+    # ensure array
+    x = np.asanyarray(x)
+    if x.ndim != 1:
+        raise ValueError('only 1D array supported')
+    n = x.shape[0]
+
+    # handle empty array
+    if n == 0:
+        return np.array([]), np.array([]), np.array([])
+
+    else:
+        # find run starts
+        loc_run_start = np.empty(n, dtype=bool)
+        loc_run_start[0] = True
+        np.not_equal(x[:-1], x[1:], out=loc_run_start[1:])
+        run_starts = np.nonzero(loc_run_start)[0]
+
+        # find run values
+        run_values = x[loc_run_start]
+
+        # find run lengths
+        run_lengths = np.diff(np.append(run_starts, n))
+
+        return run_values, run_starts, run_lengths
+
+##### Defining the objective function with the soft constraints #####
+
+def penalty_per_nurse(solution, nurse_index, params):
+    # Define nurse key
+    nurse_key = nurse_index + 1
+
+    # Initialise penalty to be 0
+    penalty = 0
+
+    # Maximum number of assignments
+    if np.sum(solution[nurse_index,:,:]) > params['y_high_in'][nurse_key][0]:
+        penalty += params['w_b_in'][nurse_key][0]
+
+    # Minimum number of assignments
+    if np.sum(solution[nurse_index,:,:]) < params['y_low_in'][nurse_key][0]:
+        penalty += params['w_a_in'][nurse_key][0]
+
+    # Maximum number of consecutive working days
+    # Create array with days -> 1 if working, 0 otherwise
+    working_days = np.zeros(np.amax(params['D']))
+    for i in range(np.amax(params['D'])):
+        if np.sum(solution[nurse_index,i,:]) > 0:
+            working_days[i] = 1
+    # Find the number of consecutive working days and compare it with the allowed value
+    wdays_values, wdays_starts, wdays_length = find_runs(working_days)
+    max_consec_wdays = params['y_high_in'][nurse_key][2]
+    for value, start, length in zip(wdays_values, wdays_starts, wdays_length):
+        if value == 1 and length > max_consec_wdays:
+            penalty += (length - max_consec_wdays) * params['w_b_in'][nurse_key][2]
+
+    # Minimum number of consecutive working days
+    min_consec_wdays = params['y_low_in'][nurse_key][2]
+    for value, start, length in zip(wdays_values, wdays_starts, wdays_length):
+        if value == 1 and length < min_consec_wdays:
+            penalty += (min_consec_wdays - length) * params['w_a_in'][nurse_key][2]
+
+    # Maximum number of consecutive free days
+    max_consec_fdays = params['y_high_in'][nurse_key][1]
+    for value, start, length in zip(wdays_values, wdays_starts, wdays_length):
+        if value == 0 and length > max_consec_fdays:
+            penalty += (length - max_consec_fdays) * params['w_b_in'][nurse_key][1]
+
+    # Minimum number of consecutive free days
+    min_consec_fdays = params['y_low_in'][nurse_key][1]
+    for value, start, length in zip(wdays_values, wdays_starts, wdays_length):
+        if value == 0 and length < min_consec_fdays:
+            penalty += (min_consec_fdays - length) * params['w_a_in'][nurse_key][1]
+
+    # Maximum number of consecutive working weekends
+    working_weekends = np.zeros(len(params['W_n'][nurse_key]))
+    for i in range(len(params['W_n'][nurse_key])):
+        weekend = params['D_in'][nurse_key][i]
+        for weekendday in weekend:
+            if working_days[weekendday] > 0:
+                working_weekends[i] = 1
+    weekends_values, weekends_starts, weekends_lenght = find_runs(working_weekends)
+    max_consec_work_weekends = params['y_high_in'][nurse_key][4]
+    for value, start, length in zip(weekends_values, weekends_starts, weekends_lenght):
+        if value == 1 and length > max_consec_work_weekends:
+            penalty += (length - max_consec_work_weekends) * params['w_b_in'][nurse_key][4]
+
+    # Maximum number of weekends in four weeks
+    if np.sum(working_weekends) > params['y_high_in'][nurse_key][3]:
+        penalty += params['w_b_in'][nurse_key][3]
+
+    # Complete weekends
+    complete_weekends = np.zeros(len(params['W_n'][nurse_key]))
+    for i in range(len(params['W_n'][nurse_key])):
+        weekend = params['D_in'][nurse_key][i]
+        working_days_WE_i = 0
+        for weekendday in weekend:
+            if working_days[weekendday] > 0:
+                working_days_WE_i += 1
+        if working_days_WE_i == 2:
+            complete_weekends[i] = 1
+    if np.sum(complete_weekends) > params['max_comp_WE'][nurse_key][0]:
+        penalty += params['w_max_comp_WE'][nurse_key][0]
+
+    # Identical shifts during complete weekends
+    num_ident_shifts_comp_WE = 0
+    for i in range(len(complete_weekends)):
+        if complete_weekends[i] == 1:
+            weekend = params['D_in'][nurse_key][i]
+            Sat = weekend[0]
+            Sun = weekend[1]
+            if np.array_equal(solution[nurse_index, Sat], solution[nurse_index, Sun]):
+                num_ident_shifts_comp_WE += 1
+    if num_ident_shifts_comp_WE > params['max_ident_shifts_comp_WE'][nurse_key][0]:
+        penalty += params['w_max_ident_shifts_comp_WE'][nurse_key][0]
+
+    # No night shift before free weekend
+    noNightShiftBeforeFreeWeekend = 0
+    for i in range(len(complete_weekends)):
+        if complete_weekends[i] == 0:
+            weekend = params['D_in'][nurse_key][i]
+            sat = weekend[0]
+            sun = weekend[1]
+            if sat > 0:
+                fri = weekend[0] - 1
+                if np.all(solution[nurse_index, sat] == 0) & np.all(solution[nurse_index, sun] == 0):
+                    if solution[nurse_index, fri, 0] != 0: #zero index for night shift
+                        noNightShiftBeforeFreeWeekend += 1
+    if noNightShiftBeforeFreeWeekend > params['NoNShiftBeforeFreeWE'][nurse_key][0]:
+        penalty += params['NoNShiftBeforeFreeWE'][nurse_key][1]
+
+    # Alternative skill
+
+    # No Friday off, if working on Sat and Sun
+    nofridayOffIfWorkingSatAndSun = 0
+    for i in range(len(complete_weekends)):
+        if complete_weekends[i] == 1:
+            weekend = params['D_in'][nurse_key][i]
+            sat = weekend[0]
+            if sat > 0:
+                fri = weekend[0] - 1
+                if np.all(solution[nurse_index, fri] == 0):
+                    nofridayOffIfWorkingSatAndSun += 1
+    if nofridayOffIfWorkingSatAndSun > params['NoFriOffIfSatSun'][nurse_key][0]:
+        penalty += params['NoFriOffIfSatSun'][nurse_key][1]
+
+    # Requested day on/off
+    # Dealt with in 'Requested shift on/off'
+
+    # Requested shift on/off
+
+    for day in range(np.amax(params['D'])):
+        # Since a nurse can at most be assigned to one shift per day, and a
+        # nurse has a penalty of 0 if she is fine with having certain shift, it
+        # is sufficient to take the sumproduct of both arrays as penalty.
+        product = solution[nurse_index, day] * params['shift_off_reqs'][nurse_index][day]
+        sumproduct = np.sum(product)
+        penalty += sumproduct
+
+    # Unwanted patterns
+    # Shift order in solution: N E D L
+    mapping = {'N': 0, 'E': 1, 'D': 2, 'L': 3}
+    unw_pat_index = 0
+    for unw_pat in params['unwanted_patterns'][nurse_key][0]:
+        num_unw_pat = [mapping[element] for element in unw_pat]
+        considered_days = len(unw_pat)
+        for day1 in range(np.amax(params['D']) - (considered_days - 1)):
+            all_days_match = True
+            for day_offset in range(considered_days):
+                if solution[nurse_index, day1 + day_offset, num_unw_pat[day_offset]] != 1:
+                    all_days_match = False
+                    break
+            if all_days_match:
+                penalty += params['w_unwanted_patterns'][nurse_key][0][unw_pat_index]
+        unw_pat_index += 1
+
+    # Return total penalty
+    return penalty
+
+##### Creating a good initial solution #####
+
+# Solution assignment of the following form:
+# [nurse][day][shift type] = 1 if shift is assigned to nurse; 0 otherwise
+
+def greedy_initial_solution(demand, solution, params):
+    for day in range(demand.shape[0]):
+        for shift_index, shift in enumerate(demand.columns):
+            required_demand = demand.loc[day][shift]
+            assigned_nurses = np.sum(solution[:, day, shift_index])
+            while assigned_nurses < required_demand:
+                penalties = np.full(len(params['N']), np.inf)
+                # Calculate the penalty score for every nurse if they were
+                # assigned to that shift
+                for nurse in range(len(params['N'])):
+                    '''
+                    noShiftYet = True
+                    for i in solution[nurse, day]:
+                        if i == 1:
+                            noShiftYet = False
+                    if noShiftYet == True: # # Only consider nurses not already assigned to a shift this day
+                    '''
+                    if not solution[nurse, day].any():
+                        solution[nurse, day, shift_index] = 1
+                        penalties[nurse] = penalty_per_nurse(solution, nurse, params)
+                        solution[nurse, day, shift_index] = 0 # reset because you only want to keep for smallest penalty
+                # Select the nurse with the smallest penalty
+                # and assign her to the shift
+                best_nurse = np.argmin(penalties)
+                solution[best_nurse, day, shift_index] = 1
+                assigned_nurses = np.sum(solution[:, day, shift_index])
+
+    return solution
+
+solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
+
+'''
+# Random assignement for testing purposes
+for nurse in range(n_nurses):
+    for day in range(n_days):
+        if np.random.rand() > 0.2:  # Randomly decide whether to place a 1
+            pos = np.random.randint(0, n_shift_types)  # Randomly select a position in the third dimension
+            solution[nurse, day, pos] = 1
+
+
+test_penalty = penalty_per_nurse(solution, 1, params)
+print(test_penalty)
+'''
+
+initial_solution = greedy_initial_solution(demand, solution, params)
+for i in range(len(initial_solution)):
+    print(initial_solution[i])
+
+print(np.zeros(4).astype(int))
+
