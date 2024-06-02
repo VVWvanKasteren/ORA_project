@@ -631,14 +631,7 @@ def greedy_initial_solution(demand, solution, params):
                 # Calculate the penalty score for every nurse if they were
                 # assigned to that shift
                 for nurse in range(len(params['N'])):
-                    '''
-                    noShiftYet = True
-                    for i in solution[nurse, day]:
-                        if i == 1:
-                            noShiftYet = False
-                    if noShiftYet == True: # # Only consider nurses not already assigned to a shift this day
-                    '''
-                    if not solution[nurse, day].any():
+                    if not solution[nurse, day].any(): # Only consider nurses not already assigned to a shift that day
                         solution[nurse, day, shift_index] = 1
                         penalties[nurse] = penalty_per_nurse(solution, nurse, params)
                         solution[nurse, day, shift_index] = 0 # reset because you only want to keep for smallest penalty
@@ -652,22 +645,8 @@ def greedy_initial_solution(demand, solution, params):
 
 solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
 
-'''
-# Random assignement for testing purposes
-for nurse in range(n_nurses):
-    for day in range(n_days):
-        if np.random.rand() > 0.2:  # Randomly decide whether to place a 1
-            pos = np.random.randint(0, n_shift_types)  # Randomly select a position in the third dimension
-            solution[nurse, day, pos] = 1
-
-
-test_penalty = penalty_per_nurse(solution, 1, params)
-print(test_penalty)
-'''
-
 initial_solution = greedy_initial_solution(demand, solution, params)
 for i in range(len(initial_solution)):
     print(initial_solution[i])
 
 print(np.zeros(4).astype(int))
-
