@@ -632,9 +632,11 @@ def greedy_initial_solution(demand, solution, params):
                 # assigned to that shift
                 for nurse in range(len(params['N'])):
                     if not solution[nurse, day].any(): # Only consider nurses not already assigned to a shift that day
+                        pen_before_assignm = penalty_per_nurse(solution, nurse, params)
                         solution[nurse, day, shift_index] = 1
-                        penalties[nurse] = penalty_per_nurse(solution, nurse, params)
+                        pen_after_assignm = penalty_per_nurse(solution, nurse, params)
                         solution[nurse, day, shift_index] = 0 # reset because you only want to keep for smallest penalty
+                        penalties[nurse] = pen_after_assignm - pen_before_assignm
                 # Select the nurse with the smallest penalty
                 # and assign her to the shift
                 best_nurse = np.argmin(penalties)
