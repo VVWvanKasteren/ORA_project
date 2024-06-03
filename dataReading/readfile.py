@@ -436,6 +436,7 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
 
     alpha_9 = model.addVars([(i, j, k, 9) for i in N for j in D for k in D if k>=j], vtype=GRB.BINARY, name = 'alpha_9')
 
+    alpha_11 = model.addVars([(i, j, k, 11) for i in N for j in range(1, len(P_shifts[i])+1) for k in range(1, len(D) - len(P_shifts[i][j-1]) + 2)], vtype=GRB.BINARY, name = 'alpha_11')
     # Random objective
     model.setObjective(quicksum(x[i,j,k] for i in N for j in shift_types for k in D), GRB.MINIMIZE)
 
@@ -516,6 +517,30 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
             for v in W_n[i]:
                 model.addConstr(alpha_9[i, D_in[i][v-1][0], D_in[i][v-1][1], 9] >= x[i,j,D_in[i][v-1][1]] - x[i,j,D_in[i][v-1][0]])
 
+    # Article constraint 16
+    for i in N:
+        for p in range(1, len(P_shifts[i]) + 1):
+            for k in range(1, len(D)- len(P_shifts[i][p-1]) + 1):
+                model.addConstr(quicksum(x[i, P_shifts[i][p-1][j], k+(j+1)-1] for j in range(len(P_shifts[i][p-1]))) <= len(P_shifts[i][p-1]) - 1 + alpha_11[i,  p,  k,11])
+
+    # Article constraint 17
+    # We don't have a set of unwanted working day patterns
+
+    # Article constraint 18
+    for i in N:
+        for p in W_n[i]:
+            model.addConstr(quicksum(z[i, q, t] for q in range(1, p+1) for t in range(p, W_n[i][-1]+1)) <= 1)
+
+    # Article constraint 19
+    for i in N:
+        for p in range(1, len(W_n[i])):
+            model.addConstr(quicksum(z[i, q, p] for q in range(1, p+1)) + quicksum(z[i, p+1, t] for t in range(p+1, W_n[i][-1]+1)) <= 1)
+
+    # Article constraint 20
+    for i in N:
+        for p in W_n[i]:
+            model.addConstr(y[i, p] == quicksum(z[i, q, t] for t in range(p, W_n[i][-1] + 1) for q in range(1, p+1)))
+
     model.optimize()
 
     if model.SolCount >= 1:
@@ -525,7 +550,6 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
         print("No feasible solution found")
 
 
-#N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
 params = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
 lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['l_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'])
 
@@ -764,10 +788,11 @@ for nurse in range(n_nurses):
 
 test_penalty = penalty_per_nurse(solution, 1, params)
 print(test_penalty)
-'''
+
 
 initial_solution = greedy_initial_solution(demand, solution, params)
-#for i in range(len(initial_solution)):
-    #print(initial_solution[i])
+for i in range(len(initial_solution)):
+    print(initial_solution[i])
+'''
 
 
