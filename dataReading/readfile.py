@@ -508,10 +508,6 @@ def penalty_per_nurse(solution, nurse_index, params):
         if value == 1 and length > max_consec_work_weekends:
             penalty += (length - max_consec_work_weekends) * params['w_b_in'][nurse_key][4]
                 
-    # Maximum number of weekends in four weeks
-    if np.sum(working_weekends) > params['y_high_in'][nurse_key][3]:
-        penalty += params['w_b_in'][nurse_key][3]
-    
     # Complete weekends
     complete_weekends = np.zeros(len(params['W_n'][nurse_key]))
     for i in range(len(params['W_n'][nurse_key])):
@@ -522,7 +518,15 @@ def penalty_per_nurse(solution, nurse_index, params):
                 working_days_WE_i += 1
         if working_days_WE_i == 2:
             complete_weekends[i] = 1
-    if np.sum(complete_weekends) > params['max_comp_WE'][nurse_key][0]:
+    violation_complete_weekends = 0
+    for i in range(len(complete_weekends)):
+        if complete_weekends[i] == 0:
+            weekend = params['D_in'][nurse_key][i]
+            Sat = weekend[0]
+            Sun = weekend[1]
+            if np.sum(Sat) != np.sum(Sun):
+                violation_complete_weekends += 1
+    if violation_complete_weekends > params['max_comp_WE'][nurse_key][0]:
         penalty += params['w_max_comp_WE'][nurse_key][0]
         
     # Identical shifts during complete weekends
