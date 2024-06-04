@@ -528,7 +528,7 @@ def penalty_per_nurse(solution, nurse_index, params):
             weekend = params['D_in'][nurse_key][i]
             Sat = weekend[0]
             Sun = weekend[1]
-            if np.sum(Sat) != np.sum(Sun):
+            if np.sum(solution[nurse_index, Sat]) != np.sum(solution[nurse_index, Sun]):
                 violation_complete_weekends += 1
     if violation_complete_weekends > params['max_comp_WE'][nurse_key][0]:
         penalty += params['w_max_comp_WE'][nurse_key][0]
