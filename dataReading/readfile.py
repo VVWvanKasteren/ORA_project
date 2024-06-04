@@ -631,6 +631,37 @@ def greedy_initial_solution(demand, solution, params):
 
 ##### Creating the linear program #####
 
+def lp_feasibility(N, shift_types, S_a, S_b, D, demand, W_n, D_in, l_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in):
+
+    model = Model('nrp')
+    model.setParam('OutputFlag', False)
+
+    # Defining Decision Variables (DVs)
+    x = model.addVars(N, shift_types, D, vtype=GRB.BINARY, name='x')
+
+    # Hard constraint I: demand
+    for j in shift_types:
+        for k in D:
+            model.addConstr(quicksum(x[i, j, k] for i in N) == int(demand.loc[k-1][j]))
+
+    # Hard constraint II: One shift per day
+    for i in N:
+        for k in D:
+            model.addConstr(quicksum(x[i, j, k] for j in shift_types) <= 1)
+
+    model.optimize()
+
+    if model.SolCount >= 1:
+        solution = {i: {k: None for k in D} for i in N}
+        for i in N:
+            for k in D:
+                assigned_shifts = [j for j in shift_types if x[i, j, k].X > 0.5]
+                if assigned_shifts:
+                    solution[i][k] = random.choice(assigned_shifts)
+        return solution
+    else:
+        return "No feasible solution found"
+
 def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in):
 
     model=Model('nrp')
@@ -781,6 +812,8 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
 params = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
 
 solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
+
+initial_random_solution = lp_feasibility(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['l_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'])
 
 initial_solution = greedy_initial_solution(demand, solution, params)
 for i in range(len(initial_solution)):
