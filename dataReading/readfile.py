@@ -308,20 +308,6 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
     print(w_log_in)
     print("")
 
-    # Last four parameters
-    # - Sigma:
-    # Explanation: Penalty for breaking max/min consec workdays and complete WEs
-    # Status: Done (see previous and following sections)
-    # - Tau:
-    # Explanation: Penalty for breaking max/min consec freedays
-    # Status: Done (see previous section)
-    # - Psi:
-    # Explanation: Penalty for complete weekends
-    # Status: Done (see following section)
-    # - Nu:
-    # Explanation: Penalty for breaking shift on/off request
-    # Status: Done (defined below in section 'Shift-off requests')
-
     # Max number of complete weekends and corresponding weight
     max_comp_WE = {}
     w_max_comp_WE = {}
@@ -381,6 +367,80 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         w_unwanted_patterns[i] = []
         unwanted_patterns[i].append(unw_pats[int(nurse_contracts[i-1])])
         w_unwanted_patterns[i].append(w_unw_pats[int(nurse_contracts[i-1])])
+    
+    # Sigma parameters
+    
+    sigma = {}
+    for i in range(1, n_nurses + 1):
+        sigma[i] = {'min_number': [],
+                    'max_number': [],
+                    'compl_we': []}
+        for pair in Pi:
+            num_consec_days = pair[1] - pair[0]
+            min_value = w_a_in[i][2] * max(y_low_in[i][2] - num_consec_days, 0)
+            sigma[i]['min_number'].append(min_value)
+            max_value = w_b_in[i][2] * max(num_consec_days - y_high_in[i][2], 0)
+            sigma[i]['max_number'].append(max_value)
+            num_incomplete_weekends = 0
+            for weekend in D_in[i]:
+                sat = weekend[0]
+                sun = weekend[1]
+                if sat == pair[1] or sun == pair[0]:
+                    num_incomplete_weekends += 1
+            we_value = w_b_in[i][4] * num_incomplete_weekends
+            sigma[i]['compl_we'].append(we_value)
+            
+    # Tau parameters
+    
+    tau = {}
+    for i in range(1, n_nurses + 1):
+        tau[i] = {'min_number': [],
+                  'max_number': []}
+        for pair in Pi:
+            num_consec_days = pair[1] - pair[0]
+            min_value = w_a_in[i][1] * max(y_low_in[i][1] - num_consec_days, 0)
+            tau[i]['min_number'].append(min_value)
+            max_value = w_b_in[i][1] * max(num_consec_days - y_high_in[i][1], 0)
+            tau[i]['max_number'].append(max_value)
+            
+    # Nu parameters
+    # We exclude soft constraints "alternative skill" for now
+    
+    nu = {}
+    for i in range(1, n_nurses + 1):
+        nu[i] = []
+        for request_per_day in shift_off_reqs[i-1]:
+            nu[i].append(request_per_day)
+            
+    # Omega parameters
+    
+    omega = {}
+    for i in range(1, n_nurses + 1):
+        omega[i] = {'omega1low': w_a_in[i][0],
+                    'omega1high': w_b_in[i][0],
+                    'omega4': w_b_in[i][3],
+                    'omega8': NoNShiftBeforeFreeWE[i][1],
+                    'omega9': w_max_ident_shifts_comp_WE[i][0],
+                    'omega11': w_unwanted_patterns[i][0]}
+    # Psi parameters
+    
+    WE_pairs = {}
+    for n in range(1, n_nurses + 1):
+        WE_pairs[n] = []
+        for i in range(1, len(W_n[n]) + 1):
+            for j in range(i, len(W_n[n]) + 1):
+                WE_pairs[n].append([i,j])
+    
+    psi = {}
+    for i in range(1, n_nurses + 1):
+        psi[i] = {'min_number': [],
+                  'max_number': []}
+        for pair in WE_pairs[i]:
+            num_consec_WEs = pair[1] - pair[0]
+            min_value = w_a_in[i][4] * max(y_low_in[i][4] - num_consec_WEs, 0)
+            psi[i]['min_number'].append(min_value)
+            max_value = w_b_in[i][4] * max(num_consec_days - y_high_in[i][4], 0)
+            psi[i]['max_number'].append(max_value)
 
     #return N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in
     return {
@@ -408,7 +468,12 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'NoFriOffIfSatSun': NoFriOffIfSatSun,
         'shift_off_reqs': shift_off_reqs,
         'unwanted_patterns': unwanted_patterns,
-        'w_unwanted_patterns': w_unwanted_patterns
+        'w_unwanted_patterns': w_unwanted_patterns,
+        'sigma': sigma,
+        'tau': tau,
+        'nu': nu,
+        'omega': omega,
+        'psi': psi
     }
 
 
