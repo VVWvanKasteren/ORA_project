@@ -769,8 +769,49 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
     alpha_9 = model.addVars([(i, j, k, 9) for i in N for j in D for k in D if k>=j], vtype=GRB.BINARY, name = 'alpha_9')
 
     alpha_11 = model.addVars([(i, j, k, 11) for i in N for j in range(1, len(P_shifts[i])+1) for k in range(1, len(D) - len(P_shifts[i][j-1]) + 2)], vtype=GRB.BINARY, name = 'alpha_11')
-    # Random objective
-    model.setObjective(quicksum(x[i,j,k] for i in N for j in shift_types for k in D), GRB.MINIMIZE)
+    
+    # Define the objective
+    objective = quicksum(
+        quicksum(
+            sigma[n][daypair] * w[n, daypair] +
+            tau[n][daypair] * r[n, daypair]
+            for daypair in range(len(Pi))
+            ) +
+        #quicksum(
+            #nu[n][day - 1][shift] * x[n, shift, day]
+            #for day in D
+            #for shift in range(len(shift_types))
+            #) +
+        omega[n]['omega1high'] * alphaUpper_1[n, 1] +
+        omega[n]['omega1low'] * alphaLower_1[n, 1] +
+        quicksum(
+            omega[n]['omega4'] * alphaUpper_4[n, j, 4] +
+            omega[n]['omega8'] * alpha_8[n, j, 8] +
+            quicksum(
+                quicksum(
+                    omega[n]['omega9'] * alpha_9[n, i, k, 9]
+                    for k in D if k>=i
+                    )
+                for i in D
+                )
+            for j in W_n[n]
+            ) #+
+        #quicksum(
+            #psi[n][]
+            #) +
+        #quicksum(
+            #quicksum(
+                #omega[n]['omega11'][pattern] * alpha_11[n, pattern, a, 11]
+                #for a in range(1, len(D) - len(P_shifts[n][pattern - 1]) + 2)
+                #)
+            #for pattern in range(1, len(P_shifts[n]) + 1)
+            #)
+        for n in N
+    )
+    
+    # Set objective
+    model.setObjective(objective)
+    #model.setObjective(quicksum(x[i,j,k] for i in N for j in shift_types for k in D), GRB.MINIMIZE)
 
     # Hard constraint I: demand
     for j in shift_types:
