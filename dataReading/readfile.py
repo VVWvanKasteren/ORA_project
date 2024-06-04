@@ -507,6 +507,10 @@ def penalty_per_nurse(solution, nurse_index, params):
     for value, start, length in zip(weekends_values, weekends_starts, weekends_lenght):
         if value == 1 and length > max_consec_work_weekends:
             penalty += (length - max_consec_work_weekends) * params['w_b_in'][nurse_key][4]
+
+    # Maximum number of weekends in four weeks
+    if np.sum(working_weekends) > params['y_high_in'][nurse_key][3]:
+        penalty += params['w_b_in'][nurse_key][3]
                 
     # Complete weekends
     complete_weekends = np.zeros(len(params['W_n'][nurse_key]))
