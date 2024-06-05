@@ -370,51 +370,54 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         w_unwanted_patterns[i].append(w_unw_pats[int(nurse_contracts[i-1])])
 
     # Sigma parameters
-
+    
     sigma = {}
     for i in range(1, n_nurses + 1):
-        sigma[i] = {'min_number': [],
-                    'max_number': [],
-                    'compl_we': []}
+        sigma[i] = []
         for pair in Pi:
+            penalty = 0
             num_consec_days = pair[1] - pair[0]
-            min_value = w_a_in[i][2] * max(y_low_in[i][2] - num_consec_days, 0)
-            sigma[i]['min_number'].append(min_value)
-            max_value = w_b_in[i][2] * max(num_consec_days - y_high_in[i][2], 0)
-            sigma[i]['max_number'].append(max_value)
+            # Penalty for too little days of continous work
+            penalty += w_a_in[i][2] * max(y_low_in[i][2] - num_consec_days, 0)
+            # Penalty for too many days of continous work
+            penalty += w_b_in[i][2] * max(num_consec_days - y_high_in[i][2], 0)
+            # Penalty for incomplete weekends
             num_incomplete_weekends = 0
             for weekend in D_in[i]:
                 sat = weekend[0]
                 sun = weekend[1]
                 if sat == pair[1] or sun == pair[0]:
                     num_incomplete_weekends += 1
-            we_value = w_b_in[i][4] * num_incomplete_weekends
-            sigma[i]['compl_we'].append(we_value)
-
+            penalty += w_max_comp_WE[i][0] * num_incomplete_weekends
+            
+            sigma[i].append(penalty)
+            
     # Tau parameters
-
+    
     tau = {}
     for i in range(1, n_nurses + 1):
-        tau[i] = {'min_number': [],
-                  'max_number': []}
+        tau[i] = []
         for pair in Pi:
+            penalty = 0
             num_consec_days = pair[1] - pair[0]
-            min_value = w_a_in[i][1] * max(y_low_in[i][1] - num_consec_days, 0)
-            tau[i]['min_number'].append(min_value)
-            max_value = w_b_in[i][1] * max(num_consec_days - y_high_in[i][1], 0)
-            tau[i]['max_number'].append(max_value)
-
+            # Penalty for too little days of continous rest
+            penalty += w_a_in[i][1] * max(y_low_in[i][1] - num_consec_days, 0)
+            # Penalty for too many days of continous work
+            penalty += w_b_in[i][1] * max(num_consec_days - y_high_in[i][1], 0)
+            
+            tau[i].append(penalty)
+            
     # Nu parameters
     # We exclude soft constraints "alternative skill" for now
-
+    
     nu = {}
     for i in range(1, n_nurses + 1):
         nu[i] = []
         for request_per_day in shift_off_reqs[i-1]:
             nu[i].append(request_per_day)
-
+            
     # Omega parameters
-
+    
     omega = {}
     for i in range(1, n_nurses + 1):
         omega[i] = {'omega1low': w_a_in[i][0],
@@ -423,25 +426,28 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
                     'omega8': NoNShiftBeforeFreeWE[i][1],
                     'omega9': w_max_ident_shifts_comp_WE[i][0],
                     'omega11': w_unwanted_patterns[i][0]}
+        
     # Psi parameters
-
+    
     WE_pairs = {}
     for n in range(1, n_nurses + 1):
         WE_pairs[n] = []
         for i in range(1, len(W_n[n]) + 1):
             for j in range(i, len(W_n[n]) + 1):
                 WE_pairs[n].append([i,j])
-
+    
     psi = {}
     for i in range(1, n_nurses + 1):
-        psi[i] = {'min_number': [],
-                  'max_number': []}
+        psi[i] = []
         for pair in WE_pairs[i]:
+            penalty = 0
             num_consec_WEs = pair[1] - pair[0]
-            min_value = w_a_in[i][4] * max(y_low_in[i][4] - num_consec_WEs, 0)
-            psi[i]['min_number'].append(min_value)
-            max_value = w_b_in[i][4] * max(num_consec_days - y_high_in[i][4], 0)
-            psi[i]['max_number'].append(max_value)
+            # Penalty for too little days of continous working weekends
+            penalty += w_a_in[i][4] * max(y_low_in[i][4] - num_consec_WEs, 0)
+            # Penalty for too many days of continous working weekends
+            penalty += w_b_in[i][4] * max(num_consec_days - y_high_in[i][4], 0)
+            
+            psi[i].append(penalty)
 
     #return N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in
     return {
