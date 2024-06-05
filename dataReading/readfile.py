@@ -787,7 +787,7 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
         quicksum(
             nu[n][day - 1][shift_types.index(shift)] * x[n, shift, day]
             for day in D
-            for shift shift_types
+            for shift in shift_types
             ) +
         omega[n]['omega1high'] * alphaUpper_1[n, 1] +
         omega[n]['omega1low'] * alphaLower_1[n, 1] +
