@@ -6,6 +6,7 @@ Created on Tue Jun  4 09:45:30 2024
 """
 
 import numpy as np
+import time
 import ast
 import pandas as pd
 import math
@@ -959,13 +960,21 @@ initial_solution = greedy_initial_solution(demand, solution, params)
 final_solution =  initial_solution
 
 optTime = 5
-time = 1
-while time <= n_days-optTime:
+count = 1
+maxTime = 20
+startTime = time.time()
+endTime = time.time()
+
+#while time <= n_days-optTime:
+while (endTime- startTime) < maxTime:
     timeWindow = []
-    for i in range(time, optTime + time):
+    for i in range(count, optTime + count):
         timeWindow.append(i)
     final_solution = lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['l_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'], params['sigma'], params['tau'], params['nu'], params['omega'], params['psi'], params['WE_pairs'], final_solution, timeWindow)
-    time+=1
+    count+=1
+    if count > n_days-optTime:
+        count = 1
+    endTime = time.time()
 
 for i in range(len(final_solution)):
     print(final_solution[i])
