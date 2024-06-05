@@ -743,7 +743,7 @@ def lp_feasibility(N, D, shift_types, demand):
     else:
         return "No feasible solution found"
 
-def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in, sigma, tau, nu, omega, psi, WE_pairs):
+def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in, sigma, tau, nu, omega, psi, WE_pairs, solution, timeWindow):
 
     model=Model('nrp')
     model.setParam('OutputFlag', True)
@@ -764,6 +764,15 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
     # DV 5
     z = model.addVars([(i, j) for i in N for j in range(len(WE_pairs))], vtype=GRB.BINARY, name = 'z')
 
+    # Fix variables
+    for i in N:
+        for j in shift_types:
+            for k in D:
+                if k not in timeWindow:
+                    x[i, j, k].lb = solution[i-1][k-1][shift_types.index(j)]
+                    x[i, j, k].ub = solution[i-1][k-1][shift_types.index(j)]
+
+
     # Slack variables
     alphaLower_1 = model.addVars([(i,1) for i in N], vtype=GRB.INTEGER, name = 'alphaLower_1')
     alphaUpper_1 = model.addVars([(i,1) for i in N], vtype=GRB.INTEGER, name = 'alphaUpper_1')
@@ -776,6 +785,7 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
     alpha_9 = model.addVars([(i, j, k, 9) for i in N for j in D for k in D if k>=j], vtype=GRB.BINARY, name = 'alpha_9')
 
     alpha_11 = model.addVars([(i, j, k, 11) for i in N for j in range(1, len(P_shifts[i])+1) for k in range(1, len(D) - len(P_shifts[i][j-1]) + 2)], vtype=GRB.BINARY, name = 'alpha_11')
+
 
     # Define the objective
     objective = quicksum(
@@ -806,20 +816,19 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
         quicksum(
             psi[n][WEpair] * z[n, WEpair]
             for WEpair in range(len(WE_pairs))
-        ) #+
-        #quicksum(
-        #quicksum(
-        #omega[n]['omega11'][pattern] * alpha_11[n, pattern, a, 11]
-        #for a in range(1, len(D) - len(P_shifts[n][pattern - 1]) + 2)
-        #)
-        #for pattern in range(1, len(P_shifts[n]) + 1)
-        #)
-        for n in N
+        ) +
+        quicksum(
+            quicksum(
+                omega[n]['omega11'][pattern-1] * alpha_11[n, pattern, a, 11]
+                for a in range(1, len(D) - len(P_shifts[n][pattern - 1]) + 2)
+                    )
+                for pattern in range(1, len(P_shifts[n]) + 1)
+                )
+            for n in N
     )
 
     # Set objective
     model.setObjective(objective, GRB.MINIMIZE)
-    #model.setObjective(quicksum(x[i,j,k] for i in N for j in shift_types for k in D), GRB.MINIMIZE)
 
     # Hard constraint I: demand
     for j in shift_types:
@@ -871,7 +880,7 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
     for i in N:
         model.addConstr(y_low_in[i][0] - alphaLower_1[i,1] <= quicksum(x[i, j, k] for j in shift_types for k in D))
     for i in N:
-        model.addConstr(quicksum(x[i, j, k] for j in shift_types for k in D) <= y_high_in[i][0] - alphaUpper_1[i,1])
+        model.addConstr(quicksum(x[i, j, k] for j in shift_types for k in D) <= y_high_in[i][0] + alphaUpper_1[i,1])
 
     # Article constraint (11)
     for i in N:
@@ -906,7 +915,7 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
 
     # Article constraint 17
     # We don't have a set of unwanted working day patterns
-    print("TEST: ", WE_pairs)
+
     # Article constraint 18
     for i in N:
         for p in W_n[i]:
@@ -925,28 +934,38 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
     model.optimize()
 
     if model.SolCount >= 1:
-        for v in model.getVars():
-            print(str(v.varName) + " = " + str(v.x))
+        #for v in model.getVars():
+            #print(str(v.varName) + " = " + str(v.x))
+        solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
+        for i in N:
+            for j in shift_types:
+                for k in D:
+                    if x[i, j, k].X == 1:
+                        solution[i-1][k-1][shift_types.index(j)] = 1
+        return solution
     else:
-        print("No feasible solution found")
+        return "No feasible solution found"
 
 ##### Applying the functions #####
 
 params = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
 
 initial_random_solution = lp_feasibility(params['N'],params['D'], shift_types, demand)
-random_penalty = 0
-#for i in range(len(initial_random_solution)):
-#random_penalty += penalty_per_nurse(initial_random_solution[i])
-
-#for i in initial_random_solution:
-#print(initial_random_solution[i])
 
 solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
 
 initial_solution = greedy_initial_solution(demand, solution, params)
-#print("TEST")
-#for i in range(len(initial_solution)):
-#print(initial_solution[i])
 
-lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['l_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'], params['sigma'], params['tau'], params['nu'], params['omega'], params['psi'], params['WE_pairs'])
+final_solution =  initial_solution
+
+optTime = 5
+time = 1
+while time <= n_days-optTime:
+    timeWindow = []
+    for i in range(time, optTime + time):
+        timeWindow.append(i)
+    final_solution = lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['l_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'], params['sigma'], params['tau'], params['nu'], params['omega'], params['psi'], params['WE_pairs'], final_solution, timeWindow)
+    time+=1
+
+for i in range(len(final_solution)):
+    print(final_solution[i])
