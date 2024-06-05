@@ -370,7 +370,7 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         w_unwanted_patterns[i].append(w_unw_pats[int(nurse_contracts[i-1])])
 
     # Sigma parameters
-    
+
     sigma = {}
     for i in range(1, n_nurses + 1):
         sigma[i] = []
@@ -389,11 +389,11 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
                 if sat == pair[1] or sun == pair[0]:
                     num_incomplete_weekends += 1
             penalty += w_max_comp_WE[i][0] * num_incomplete_weekends
-            
+
             sigma[i].append(penalty)
-            
+
     # Tau parameters
-    
+
     tau = {}
     for i in range(1, n_nurses + 1):
         tau[i] = []
@@ -404,20 +404,20 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
             penalty += w_a_in[i][1] * max(y_low_in[i][1] - num_consec_days, 0)
             # Penalty for too many days of continous work
             penalty += w_b_in[i][1] * max(num_consec_days - y_high_in[i][1], 0)
-            
+
             tau[i].append(penalty)
-            
+
     # Nu parameters
     # We exclude soft constraints "alternative skill" for now
-    
+
     nu = {}
     for i in range(1, n_nurses + 1):
         nu[i] = []
         for request_per_day in shift_off_reqs[i-1]:
             nu[i].append(request_per_day)
-            
+
     # Omega parameters
-    
+
     omega = {}
     for i in range(1, n_nurses + 1):
         omega[i] = {'omega1low': w_a_in[i][0],
@@ -426,16 +426,16 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
                     'omega8': NoNShiftBeforeFreeWE[i][1],
                     'omega9': w_max_ident_shifts_comp_WE[i][0],
                     'omega11': w_unwanted_patterns[i][0]}
-        
+
     # Psi parameters
-    
+
     WE_pairs = {}
     for n in range(1, n_nurses + 1):
         WE_pairs[n] = []
         for i in range(1, len(W_n[n]) + 1):
             for j in range(i, len(W_n[n]) + 1):
                 WE_pairs[n].append([i,j])
-    
+
     psi = {}
     for i in range(1, n_nurses + 1):
         psi[i] = []
@@ -446,7 +446,7 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
             penalty += w_a_in[i][4] * max(y_low_in[i][4] - num_consec_WEs, 0)
             # Penalty for too many days of continous working weekends
             penalty += w_b_in[i][4] * max(num_consec_days - y_high_in[i][4], 0)
-            
+
             psi[i].append(penalty)
 
     #return N, S_a, S_b, D, Pi, W_n, D_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in
@@ -762,7 +762,7 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
     r = model.addVars([(i, j) for i in N for j in range(len(Pi))], vtype=GRB.BINARY, name = 'r')
 
     # DV 5
-    z = model.addVars([(i, j, k) for i in N for j in W_n[i] for k in W_n[i] if k >= j], vtype=GRB.BINARY, name = 'z')
+    z = model.addVars([(i, j) for i in N for j in range(len(WE_pairs))], vtype=GRB.BINARY, name = 'z')
 
     # Slack variables
     alphaLower_1 = model.addVars([(i,1) for i in N], vtype=GRB.INTEGER, name = 'alphaLower_1')
@@ -776,19 +776,19 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
     alpha_9 = model.addVars([(i, j, k, 9) for i in N for j in D for k in D if k>=j], vtype=GRB.BINARY, name = 'alpha_9')
 
     alpha_11 = model.addVars([(i, j, k, 11) for i in N for j in range(1, len(P_shifts[i])+1) for k in range(1, len(D) - len(P_shifts[i][j-1]) + 2)], vtype=GRB.BINARY, name = 'alpha_11')
-    
+
     # Define the objective
     objective = quicksum(
         quicksum(
             sigma[n][daypair] * w[n, daypair] +
             tau[n][daypair] * r[n, daypair]
             for daypair in range(len(Pi))
-            ) +
+        ) +
         quicksum(
             nu[n][day - 1][shift_types.index(shift)] * x[n, shift, day]
             for day in D
             for shift in shift_types
-            ) +
+        ) +
         omega[n]['omega1high'] * alphaUpper_1[n, 1] +
         omega[n]['omega1low'] * alphaLower_1[n, 1] +
         quicksum(
@@ -798,26 +798,27 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
                 quicksum(
                     omega[n]['omega9'] * alpha_9[n, i, k, 9]
                     for k in D if k>=i
-                    )
-                for i in D
                 )
+                for i in D
+            )
             for j in W_n[n]
-            ) #+
+        ) +
+        quicksum(
+            psi[n][WEpair] * z[n, WEpair]
+            for WEpair in range(len(WE_pairs))
+        ) #+
         #quicksum(
-            #psi[n][]
-            #) +
         #quicksum(
-            #quicksum(
-                #omega[n]['omega11'][pattern] * alpha_11[n, pattern, a, 11]
-                #for a in range(1, len(D) - len(P_shifts[n][pattern - 1]) + 2)
-                #)
-            #for pattern in range(1, len(P_shifts[n]) + 1)
-            #)
+        #omega[n]['omega11'][pattern] * alpha_11[n, pattern, a, 11]
+        #for a in range(1, len(D) - len(P_shifts[n][pattern - 1]) + 2)
+        #)
+        #for pattern in range(1, len(P_shifts[n]) + 1)
+        #)
         for n in N
     )
-    
+
     # Set objective
-    model.setObjective(objective)
+    model.setObjective(objective, GRB.MINIMIZE)
     #model.setObjective(quicksum(x[i,j,k] for i in N for j in shift_types for k in D), GRB.MINIMIZE)
 
     # Hard constraint I: demand
@@ -905,21 +906,21 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
 
     # Article constraint 17
     # We don't have a set of unwanted working day patterns
-
+    print("TEST: ", WE_pairs)
     # Article constraint 18
     for i in N:
         for p in W_n[i]:
-            model.addConstr(quicksum(z[i, q, t] for q in range(1, p+1) for t in range(p, W_n[i][-1]+1)) <= 1)
+            model.addConstr(quicksum(z[i, q] for q in range(len(WE_pairs)) if WE_pairs[i][q][0] <= p and WE_pairs[i][q][1] >= p) <= 1)
 
     # Article constraint 19
     for i in N:
         for p in range(1, len(W_n[i])):
-            model.addConstr(quicksum(z[i, q, p] for q in range(1, p+1)) + quicksum(z[i, p+1, t] for t in range(p+1, W_n[i][-1]+1)) <= 1)
+            model.addConstr(quicksum(z[i, q] for q in range(len(WE_pairs)) if WE_pairs[i][q][0] <= p  and WE_pairs[i][q][1] == p) + quicksum(z[i, t] for t in range(len(WE_pairs)) if WE_pairs[i][t][0] == p+1 and WE_pairs[i][t][1] >= p) <= 1)
 
     # Article constraint 20
     for i in N:
         for p in W_n[i]:
-            model.addConstr(y[i, p] == quicksum(z[i, q, t] for t in range(p, W_n[i][-1] + 1) for q in range(1, p+1)))
+            model.addConstr(y[i, p] == quicksum(z[i, q]for q in range(len(WE_pairs)) if WE_pairs[i][q][0] <= p and WE_pairs[i][q][1] >= p))
 
     model.optimize()
 
@@ -936,16 +937,16 @@ params = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_re
 initial_random_solution = lp_feasibility(params['N'],params['D'], shift_types, demand)
 random_penalty = 0
 #for i in range(len(initial_random_solution)):
-    #random_penalty += penalty_per_nurse(initial_random_solution[i])
+#random_penalty += penalty_per_nurse(initial_random_solution[i])
 
 #for i in initial_random_solution:
-    #print(initial_random_solution[i])
+#print(initial_random_solution[i])
 
 solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
 
 initial_solution = greedy_initial_solution(demand, solution, params)
 #print("TEST")
 #for i in range(len(initial_solution)):
-    #print(initial_solution[i])
+#print(initial_solution[i])
 
 lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['l_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'], params['sigma'], params['tau'], params['nu'], params['omega'], params['psi'], params['WE_pairs'])
