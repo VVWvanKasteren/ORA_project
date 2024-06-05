@@ -966,7 +966,7 @@ optTime = 5
 count = 1
 
 # Max running time
-maxTime = 20
+maxTime = 30
 
 startTime = time.time()
 endTime = time.time()
@@ -984,3 +984,8 @@ while (endTime- startTime) < maxTime:
 
 for i in range(len(final_solution)):
     print(final_solution[i])
+
+penalty_total = 0
+for i in range(n_nurses):
+    penalty_total += penalty_per_nurse(final_solution, i, params)
+print("PENALTY TOTAL: ", penalty_total)
