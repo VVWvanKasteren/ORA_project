@@ -959,9 +959,15 @@ initial_solution = greedy_initial_solution(demand, solution, params)
 
 final_solution =  initial_solution
 
+# Optimization/time window
 optTime = 5
+
+# Needed to push the time window into the future
 count = 1
+
+# Max running time
 maxTime = 20
+
 startTime = time.time()
 endTime = time.time()
 
