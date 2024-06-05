@@ -480,6 +480,7 @@ def createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, w
         'tau': tau,
         'nu': nu,
         'omega': omega,
+        'WE_pairs': WE_pairs,
         'psi': psi
     }
 
