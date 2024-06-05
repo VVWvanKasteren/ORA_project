@@ -743,7 +743,7 @@ def lp_feasibility(N, D, shift_types, demand):
     else:
         return "No feasible solution found"
 
-def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in, sigma, tau, nu, omega, psi):
+def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in, y_high_in, w_a_in, w_b_in, w_log_in, sigma, tau, nu, omega, psi, WE_pairs):
 
     model=Model('nrp')
     model.setParam('OutputFlag', True)
@@ -948,4 +948,4 @@ initial_solution = greedy_initial_solution(demand, solution, params)
 #for i in range(len(initial_solution)):
     #print(initial_solution[i])
 
-lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['l_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'], params['sigma'], params['tau'], params['nu'], params['omega'], params['psi'])
+lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['l_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'], params['sigma'], params['tau'], params['nu'], params['omega'], params['psi'], params['WE_pairs'])
