@@ -13,7 +13,7 @@ import math
 import random
 from gurobipy import *
 
-with open(r"sprint_hint03.dat", 'r') as file:
+with open(r"medium05.dat", 'r') as file:
     lines = [line.strip().split() for line in file]
     n_days = 28
     shift_types = []
@@ -787,7 +787,6 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
 
     alpha_11 = model.addVars([(i, j, k, 11) for i in N for j in range(1, len(P_shifts[i])+1) for k in range(1, len(D) - len(P_shifts[i][j-1]) + 2)], vtype=GRB.BINARY, name = 'alpha_11')
 
-
     # Define the objective
     objective = quicksum(
         quicksum(
@@ -816,7 +815,7 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
         ) +
         quicksum(
             psi[n][WEpair] * z[n, WEpair]
-            for WEpair in range(len(WE_pairs))
+            for WEpair in range(len(WE_pairs[n]))
         ) +
         quicksum(
             quicksum(
@@ -920,17 +919,17 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
     # Article constraint 18
     for i in N:
         for p in W_n[i]:
-            model.addConstr(quicksum(z[i, q] for q in range(len(WE_pairs)) if WE_pairs[i][q][0] <= p and WE_pairs[i][q][1] >= p) <= 1)
+            model.addConstr(quicksum(z[i, q] for q in range(len(WE_pairs[i])) if WE_pairs[i][q][0] <= p and WE_pairs[i][q][1] >= p) <= 1)
 
     # Article constraint 19
     for i in N:
         for p in range(1, len(W_n[i])):
-            model.addConstr(quicksum(z[i, q] for q in range(len(WE_pairs)) if WE_pairs[i][q][0] <= p  and WE_pairs[i][q][1] == p) + quicksum(z[i, t] for t in range(len(WE_pairs)) if WE_pairs[i][t][0] == p+1 and WE_pairs[i][t][1] >= p) <= 1)
+            model.addConstr(quicksum(z[i, q] for q in range(len(WE_pairs[i])) if WE_pairs[i][q][0] <= p  and WE_pairs[i][q][1] == p) + quicksum(z[i, t] for t in range(len(WE_pairs[i])) if WE_pairs[i][t][0] == p+1 and WE_pairs[i][t][1] >= p) <= 1)
 
     # Article constraint 20
     for i in N:
         for p in W_n[i]:
-            model.addConstr(y[i, p] == quicksum(z[i, q]for q in range(len(WE_pairs)) if WE_pairs[i][q][0] <= p and WE_pairs[i][q][1] >= p))
+            model.addConstr(y[i, p] == quicksum(z[i, q]for q in range(len(WE_pairs[i])) if WE_pairs[i][q][0] <= p and WE_pairs[i][q][1] >= p))
 
     model.optimize()
 
@@ -951,28 +950,88 @@ def lp_nrp(N, shift_types, S_a, S_b, D, Pi, W_n, D_in, l_in, P_shifts, y_low_in,
 
 params = createPar(shift_types, n_contracts, n_nurses, comp_shifts, shift_off_reqs, weekends_contract, demand, nurse_contracts, contr_param, unw_pats, w_unw_pats, n_days)
 
+# Random solution
 initial_random_solution = lp_feasibility(params['N'],params['D'], shift_types, demand)
+
+random_solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
+
+for i in initial_random_solution:
+    for j in initial_random_solution[i]:
+        if initial_random_solution[i][j] != None:
+            random_solution[i-1][j-1][shift_types.index(initial_random_solution[i][j])] = 1
+
+# Optimization/time window
+optTime_random = 7
+
+# Needed to push the time window into the future
+count_random = 1
+
+# Max running time (in seconds)
+maxTime_random = 60
+
+# Max iteration
+maxIt_random = 50
+
+startTime_random = time.time()
+endTime_random = time.time()
+
+objValue_random = []
+
+#while count_random < maxIt_random:
+#while time_random <= n_days-optTime_random:
+while (endTime_random- startTime_random) < maxTime_random:
+
+    penalty_random = 0
+    for i in range(n_nurses):
+        penalty_random += penalty_per_nurse(random_solution, i, params)
+    objValue_random.append(penalty_random)
+
+    timeWindow_random = []
+    for i in range(count_random, optTime_random + count_random):
+        timeWindow_random.append(i)
+    random_solution = lp_nrp(params['N'], params['S'], params['S_a'], params['S_b'], params['D'], params['Pi'], params['W_n'], params['D_in'], params['l_in'], params['P_shifts'], params['y_low_in'], params['y_high_in'], params['w_a_in'], params['w_b_in'], params['w_log_in'], params['sigma'], params['tau'], params['nu'], params['omega'], params['psi'], params['WE_pairs'], random_solution, timeWindow_random)
+    count_random+=1
+    if count_random > n_days-optTime_random:
+        count_random = 1
+    endTime_random = time.time()
+
+#for i in range(len(final_solution)):
+#print(final_solution[i])
+
+
+
+# Greedy initial solution
 
 solution = np.zeros([n_nurses, np.amax(params['D']), n_shift_types], dtype=int)
 
-initial_solution = greedy_initial_solution(demand, solution, params)
-
-final_solution =  initial_solution
+final_solution = greedy_initial_solution(demand, solution, params)
 
 # Optimization/time window
-optTime = 5
+optTime = 7
 
 # Needed to push the time window into the future
 count = 1
 
-# Max running time
-maxTime = 30
+# Max running time (in seconds)
+maxTime = 60
+
+# Max iteration
+maxIt = 50
 
 startTime = time.time()
 endTime = time.time()
 
+objValue = []
+
+#while count < maxIt:
 #while time <= n_days-optTime:
 while (endTime- startTime) < maxTime:
+
+    penalty_total = 0
+    for i in range(n_nurses):
+        penalty_total += penalty_per_nurse(final_solution, i, params)
+    objValue.append(penalty_total)
+
     timeWindow = []
     for i in range(count, optTime + count):
         timeWindow.append(i)
@@ -982,10 +1041,18 @@ while (endTime- startTime) < maxTime:
         count = 1
     endTime = time.time()
 
-for i in range(len(final_solution)):
-    print(final_solution[i])
+#for i in range(len(final_solution)):
+    #print(final_solution[i])
 
-penalty_total = 0
-for i in range(n_nurses):
-    penalty_total += penalty_per_nurse(final_solution, i, params)
-print("PENALTY TOTAL: ", penalty_total)
+
+# Penalty totals
+
+objValue_random.sort(reverse=True)
+print(f"Random obj. value: {objValue_random[-1]}")
+#for i in range(len(objValue_random)):
+    #print(int(objValue_random[i]))
+
+objValue.sort(reverse=True)
+print(f"Greedy obj. value: {objValue[-1]}")
+#for i in range(len(objValue)):
+    #print(int(objValue[i]))
